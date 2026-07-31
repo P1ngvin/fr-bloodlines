@@ -6,7 +6,7 @@ import {
   SIBLING_GAP,
   type LayoutSlot,
 } from './packSubtree'
-import { areSiblings, shareAParent, shareBothParents } from './relations'
+import { areSiblings, shareBothParents } from './relations'
 import type {
   TreeLayout,
   TreeLayoutEdge,
@@ -50,12 +50,26 @@ export function buildStableTree(
   const activeIds = new Set(active.map((dragon) => dragon.id))
 
   const roots = findRoots(project).filter((root) => activeIds.has(root.id))
-  const bloodlineRoots = roots.filter(
-    (root) => !isMateOnlyRoot(project, root.id, childrenIndex),
-  )
-  const mateRoots = roots.filter((root) =>
-    isMateOnlyRoot(project, root.id, childrenIndex),
-  )
+  const descCount = new Map<string, number>()
+  function countDescendants(id: string): number {
+    const hit = descCount.get(id)
+    if (hit !== undefined) return hit
+    let total = 0
+    for (const childId of childrenIndex[id] ?? []) {
+      total += 1 + countDescendants(childId)
+    }
+    descCount.set(id, total)
+    return total
+  }
+  const byForestSize = (a: Dragon, b: Dragon) =>
+    countDescendants(b.id) - countDescendants(a.id) || a.id.localeCompare(b.id)
+
+  const bloodlineRoots = roots
+    .filter((root) => !isMateOnlyRoot(project, root.id, childrenIndex))
+    .sort(byForestSize)
+  const mateRoots = roots
+    .filter((root) => isMateOnlyRoot(project, root.id, childrenIndex))
+    .sort(byForestSize)
 
   const placed = new Map<string, LayoutSlot>()
   const edges: TreeLayoutEdge[] = []
@@ -223,7 +237,7 @@ export function buildStableTree(
     }
 
     const local = new Map<string, LayoutSlot>()
-    const part = packSubtree(
+    packSubtree(
       rootId,
       generations.get(rootId) ?? 0,
       maxGenerations === Number.POSITIVE_INFINITY
@@ -234,16 +248,59 @@ export function buildStableTree(
       addEdge,
     )
 
+    const newly: string[] = []
+    let minLocal = Infinity
+    let maxLocal = -Infinity
     for (const [id, slot] of local) {
-      if (!activeIds.has(id)) continue
-      if (placed.has(id)) continue
+      if (!activeIds.has(id) || placed.has(id)) continue
+      newly.push(id)
+      minLocal = Math.min(minLocal, slot.x)
+      maxLocal = Math.max(maxLocal, slot.x)
+    }
+
+    if (newly.length === 0) {
+      if (placedKids.length > 0) placeBesidePartner(rootId, placedKids)
+      return
+    }
+
+    if (!Number.isFinite(minLocal)) minLocal = 0
+    const localWidth = Math.max(maxLocal - minLocal + 1, 1)
+
+    for (const id of newly) {
+      const slot = local.get(id)!
       placed.set(id, {
         generation: generations.get(id) ?? slot.generation,
-        x: slot.x + cursor,
+        x: slot.x - minLocal + cursor,
       })
     }
 
-    cursor += Math.max(part.width, 1) + SIBLING_GAP
+    // Forests share descendants across roots (Carl→Runefall→Romeo when Romeo
+    // is already packed under Caerula). Anchor onto those kids instead of
+    // reserving a fresh horizontal band for the full packed width.
+    const anchors: number[] = []
+    for (const id of newly) {
+      for (const childId of childrenIndex[id] ?? []) {
+        if (!activeIds.has(childId)) continue
+        if (newly.includes(childId)) continue
+        const childSlot = placed.get(childId)
+        if (childSlot) anchors.push(childSlot.x)
+      }
+    }
+
+    if (anchors.length > 0) {
+      const anchorX =
+        (Math.min(...anchors) + Math.max(...anchors)) / 2
+      const xs = newly.map((id) => placed.get(id)!.x)
+      const mid = (Math.min(...xs) + Math.max(...xs)) / 2
+      const delta = anchorX - mid
+      for (const id of newly) {
+        const slot = placed.get(id)!
+        placed.set(id, { generation: slot.generation, x: slot.x + delta })
+      }
+      return
+    }
+
+    cursor += localWidth + SIBLING_GAP
   }
 
   for (const root of bloodlineRoots) {
@@ -264,10 +321,10 @@ export function buildStableTree(
   }
 
   clusterSiblingGroups(project, placed, childrenIndex, generations)
-  clearCoupleGaps(project, placed, childrenIndex)
-  separateCoParentGroups(project, placed, childrenIndex)
-  unstackFromNonParents(project, placed)
-  resolveOverlaps(placed)
+  // Couples must be the last word on X - pack mates as units toward kids and
+  // ancestors (never park one mate alone under their parents).
+  layoutCouplesOnRows(project, placed, childrenIndex)
+  layoutCouplesOnRows(project, placed, childrenIndex)
 
   const siblingEdges = buildSiblingEdges(project, placed)
   const { nodes, minGeneration, maxGeneration } = normalizePlaced(placed)
@@ -371,17 +428,6 @@ function shiftNodeAndDescendants(
   }
 }
 
-function setNodeX(
-  id: string,
-  x: number,
-  childrenIndex: ReturnType<typeof buildChildrenIndex>,
-  placed: Map<string, LayoutSlot>,
-) {
-  const slot = placed.get(id)
-  if (!slot) return
-  shiftNodeAndDescendants(id, x - slot.x, childrenIndex, placed)
-}
-
 /** Mother+father pairs that share at least one child. */
 function findCouples(project: Project): [string, string][] {
   const pairs = new Map<string, [string, string]>()
@@ -396,94 +442,233 @@ function findCouples(project: Project): [string, string][] {
   return [...pairs.values()]
 }
 
-function areKin(
+function coupleMotherFather(
   project: Project,
   aId: string,
   bId: string,
-): boolean {
-  const a = project.dragons[aId]
-  const b = project.dragons[bId]
-  if (!a || !b) return false
-  if (shareAParent(a, b)) return true
-  if (a.siblingGroupId && a.siblingGroupId === b.siblingGroupId) return true
-  return false
+  placed: Map<string, LayoutSlot>,
+): [string, string] {
+  const a = placed.get(aId)!
+  const b = placed.get(bId)!
+  const aDragon = project.dragons[aId]
+  const motherId =
+    aDragon?.sex === 'female'
+      ? aId
+      : aDragon?.sex === 'male'
+        ? bId
+        : a.x <= b.x
+          ? aId
+          : bId
+  const fatherId = motherId === aId ? bId : aId
+  return [motherId, fatherId]
+}
+
+type CoupleBlock = { ids: string[]; sortKey: number }
+
+function parentMidpoint(
+  project: Project,
+  dragonId: string,
+  placed: Map<string, LayoutSlot>,
+  childGeneration: number,
+): number | null {
+  const dragon = project.dragons[dragonId]
+  if (!dragon?.motherId || !dragon.fatherId) return null
+  const mother = placed.get(dragon.motherId)
+  const father = placed.get(dragon.fatherId)
+  if (!mother || !father) return null
+  if (
+    mother.generation !== childGeneration - 1 ||
+    father.generation !== childGeneration - 1
+  ) {
+    return null
+  }
+  return (mother.x + father.x) / 2
+}
+
+function sharedChildrenMid(
+  aId: string,
+  bId: string,
+  placed: Map<string, LayoutSlot>,
+  childrenIndex: ReturnType<typeof buildChildrenIndex>,
+): number | null {
+  const aKids = childrenIndex[aId] ?? []
+  const bKidSet = new Set(childrenIndex[bId] ?? [])
+  const shared = aKids.filter((id) => bKidSet.has(id) && placed.has(id))
+  if (shared.length === 0) return null
+  return (
+    (Math.min(...shared.map((id) => placed.get(id)!.x)) +
+      Math.max(...shared.map((id) => placed.get(id)!.x))) /
+    2
+  )
+}
+
+function buildRowBlocks(
+  project: Project,
+  placed: Map<string, LayoutSlot>,
+  childrenIndex: ReturnType<typeof buildChildrenIndex>,
+  generation: number,
+  desiredX: (ids: string[]) => number,
+): CoupleBlock[] {
+  const ids = [...placed.entries()]
+    .filter(([, slot]) => slot.generation === generation)
+    .map(([id]) => id)
+  if (ids.length === 0) return []
+
+  const blocks: CoupleBlock[] = []
+  const used = new Set<string>()
+
+  for (const [aId, bId] of findCouples(project)) {
+    if (!ids.includes(aId) || !ids.includes(bId)) continue
+    if (used.has(aId) || used.has(bId)) continue
+    const [motherId, fatherId] = coupleMotherFather(project, aId, bId, placed)
+    const pair = [motherId, fatherId]
+    blocks.push({ ids: pair, sortKey: desiredX(pair) })
+    used.add(aId)
+    used.add(bId)
+  }
+
+  for (const id of ids) {
+    if (used.has(id)) continue
+    blocks.push({ ids: [id], sortKey: desiredX([id]) })
+  }
+
+  return blocks
+}
+
+/** Place blocks left-to-right, each centered on sortKey when space allows. */
+function placeRowBlocks(
+  placed: Map<string, LayoutSlot>,
+  generation: number,
+  blocks: CoupleBlock[],
+  step: number,
+) {
+  if (blocks.length === 0) return
+
+  blocks.sort(
+    (a, b) => a.sortKey - b.sortKey || a.ids[0]!.localeCompare(b.ids[0]!),
+  )
+
+  const blockGap = step
+  let cursor = Number.NEGATIVE_INFINITY
+
+  for (let b = 0; b < blocks.length; b++) {
+    const block = blocks[b]!
+    const width = (block.ids.length - 1) * step
+    const idealLeft = block.sortKey - width / 2
+    const left = Math.max(cursor, idealLeft)
+
+    for (let i = 0; i < block.ids.length; i++) {
+      const id = block.ids[i]!
+      const slot = placed.get(id)!
+      placed.set(id, { generation: slot.generation, x: left + i * step })
+    }
+
+    cursor = left + block.ids.length * step
+    const next = blocks[b + 1]
+    if (
+      next &&
+      (block.ids.length >= 2 || next.ids.length >= 2)
+    ) {
+      // Gap between couple-blocks (or couple vs single) so fork rails stay
+      // visually separate.
+      cursor += blockGap
+    }
+  }
 }
 
 /**
- * If anyone sits between a mother/father pair on the same row, move them
- * outside the couple. Does not re-anchor the whole tree around couples.
+ * Pack each generation as couple-blocks + singles so mates stay adjacent.
+ * Couples move as units toward children and ancestors - never park one mate
+ * under their parents alone (that re-opened Sivtar|Caerula|Nibiru|Runefall).
  */
-function clearCoupleGaps(
+function layoutCouplesOnRows(
   project: Project,
   placed: Map<string, LayoutSlot>,
   childrenIndex: ReturnType<typeof buildChildrenIndex>,
 ) {
   const step = 1 + SIBLING_GAP
-  const couples = findCouples(project)
+  const generations = [
+    ...new Set([...placed.values()].map((slot) => slot.generation)),
+  ].sort((a, b) => a - b)
 
-  for (let iter = 0; iter < 8; iter++) {
-    let changed = false
+  const avg = (xs: number[]) =>
+    xs.length === 0 ? 0 : xs.reduce((s, v) => s + v, 0) / xs.length
 
-    for (const [aId, bId] of couples) {
-      const a = placed.get(aId)
-      const b = placed.get(bId)
-      if (!a || !b || a.generation !== b.generation) continue
-
-      const leftId = a.x <= b.x ? aId : bId
-      const rightId = a.x <= b.x ? bId : aId
-      const lo = placed.get(leftId)!.x
-      const hi = placed.get(rightId)!.x
-      if (hi - lo < step - 1e-6) continue
-
-      const interlopers = [...placed.entries()]
-        .filter(([id, slot]) => {
-          if (id === leftId || id === rightId) return false
-          if (slot.generation !== a.generation) return false
-          return slot.x > lo + 1e-6 && slot.x < hi - 1e-6
-        })
-        .sort((p, q) => p[1].x - q[1].x)
-
-      if (interlopers.length === 0) continue
-
-      const toLeft = interlopers
-        .filter(([id]) => {
-          const kinLeft = areKin(project, id, leftId)
-          const kinRight = areKin(project, id, rightId)
-          if (kinLeft && !kinRight) return true
-          if (kinRight && !kinLeft) return false
-          const slot = placed.get(id)!
-          return slot.x - lo <= hi - slot.x
-        })
-        .sort((p, q) => q[1].x - p[1].x)
-
-      const toRight = interlopers
-        .filter(([id]) => !toLeft.some(([other]) => other === id))
-        .sort((p, q) => p[1].x - q[1].x)
-
-      let leftCursor = lo
-      for (const [id] of toLeft) {
-        leftCursor -= step
-        const slot = placed.get(id)
-        if (!slot) continue
-        if (Math.abs(leftCursor - slot.x) > 1e-6) {
-          setNodeX(id, leftCursor, childrenIndex, placed)
-          changed = true
+  // Deepest first: order by children.
+  for (const generation of [...generations].reverse()) {
+    const blocks = buildRowBlocks(
+      project,
+      placed,
+      childrenIndex,
+      generation,
+      (ids) => {
+        if (ids.length === 2) {
+          const kids =
+            sharedChildrenMid(ids[0]!, ids[1]!, placed, childrenIndex) ??
+            avg(ids.map((id) => placed.get(id)!.x))
+          return kids
         }
-      }
-
-      let rightCursor = hi
-      for (const [id] of toRight) {
-        rightCursor += step
-        const slot = placed.get(id)
-        if (!slot) continue
-        if (Math.abs(rightCursor - slot.x) > 1e-6) {
-          setNodeX(id, rightCursor, childrenIndex, placed)
-          changed = true
-        }
+        const id = ids[0]!
+        return (
+          sharedChildrenMid(id, id, placed, childrenIndex) ??
+          placed.get(id)!.x
+        )
+      },
+    )
+    // Singles: prefer mid of any placed children.
+    for (const block of blocks) {
+      if (block.ids.length !== 1) continue
+      const id = block.ids[0]!
+      const kids = (childrenIndex[id] ?? []).filter((cid) => placed.has(cid))
+      if (kids.length > 0) {
+        block.sortKey =
+          (Math.min(...kids.map((cid) => placed.get(cid)!.x)) +
+            Math.max(...kids.map((cid) => placed.get(cid)!.x))) /
+          2
       }
     }
+    placeRowBlocks(placed, generation, blocks, step)
+  }
 
-    if (!changed) break
+  // Top-down: pull each block toward ancestors + children, still as a unit.
+  for (const generation of generations) {
+    const blocks = buildRowBlocks(
+      project,
+      placed,
+      childrenIndex,
+      generation,
+      (ids) => {
+        const targets: number[] = []
+        if (ids.length === 2) {
+          const kids = sharedChildrenMid(
+            ids[0]!,
+            ids[1]!,
+            placed,
+            childrenIndex,
+          )
+          if (kids !== null) targets.push(kids)
+        } else {
+          const id = ids[0]!
+          const kids = (childrenIndex[id] ?? []).filter((cid) =>
+            placed.has(cid),
+          )
+          if (kids.length > 0) {
+            targets.push(
+              (Math.min(...kids.map((cid) => placed.get(cid)!.x)) +
+                Math.max(...kids.map((cid) => placed.get(cid)!.x))) /
+                2,
+            )
+          }
+        }
+        for (const id of ids) {
+          const mid = parentMidpoint(project, id, placed, generation)
+          if (mid !== null) targets.push(mid)
+        }
+        if (targets.length > 0) return avg(targets)
+        return avg(ids.map((id) => placed.get(id)!.x))
+      },
+    )
+    placeRowBlocks(placed, generation, blocks, step)
   }
 }
 
@@ -533,7 +718,8 @@ function separateCoParentGroups(
   childrenIndex: ReturnType<typeof buildChildrenIndex>,
 ) {
   const step = 1 + SIBLING_GAP
-  const extra = step
+  // Small pad between half-sibling clusters so couple rails do not merge.
+  const extra = 0.5
 
   for (const parentId of Object.keys(project.dragons)) {
     const childIds = (childrenIndex[parentId] ?? []).filter((id) =>

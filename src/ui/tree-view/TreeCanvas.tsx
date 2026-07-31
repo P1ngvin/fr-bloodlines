@@ -15,11 +15,13 @@ import {
   useViewSettings,
 } from '../../state/viewSettingsStore'
 import {
+  buildChildrenIndex,
   buildFocusTree,
   buildStableTree,
   canLinkAsChild,
   canLinkAsParent,
   canLinkAsSiblings,
+  kinshipLabel,
   listDragons,
 } from '../../tree'
 import {
@@ -99,6 +101,7 @@ function dragonMenuItems(dragon: Dragon): ContextMenuItem[] {
       type: 'item',
       id: 'add-child',
       label: 'Add child',
+      disabled: dragon.sex === 'unknown',
     },
     { type: 'separator' },
     {
@@ -248,6 +251,13 @@ function parentForkPaths(
     byGap.set(gapKey, list)
   }
 
+  function rangesInterleave(a: Fork, b: Fork): boolean {
+    return (
+      (a.spanLo < b.spanLo && b.spanLo < a.spanHi && a.spanHi < b.spanHi) ||
+      (b.spanLo < a.spanLo && a.spanLo < b.spanHi && b.spanHi < a.spanHi)
+    )
+  }
+
   function forksConflict(a: Fork, b: Fork): boolean {
     const aStems = new Set(a.stems.map((s) => s.id))
     const bStems = new Set(b.stems.map((s) => s.id))
@@ -260,6 +270,9 @@ function parentForkPaths(
       // Two full couples sharing a mate (Belthil×Sidhe vs Belthil×Morilinde).
       return true
     }
+
+    // Interleaved couples (A _ B _ A-mate _ B-mate) must never share a rail.
+    if (rangesInterleave(a, b)) return true
 
     if (a.spanHi < b.spanLo - 0.05 || b.spanHi < a.spanLo - 0.05) return false
     return true
@@ -275,6 +288,13 @@ function parentForkPaths(
       const used = new Set<number>()
       for (const prev of laneOf) {
         if (forksConflict(prev.fork, fork)) used.add(prev.lane)
+      }
+      // Full couples always take distinct lanes from other full couples in the
+      // same gap - prevents one continuous H-rail across unrelated pairs.
+      if (fork.stems.length >= 2) {
+        for (const prev of laneOf) {
+          if (prev.fork.stems.length >= 2) used.add(prev.lane)
+        }
       }
       let lane = 0
       while (used.has(lane)) lane += 1
@@ -450,6 +470,7 @@ export function TreeCanvas({
 }: TreeCanvasProps) {
   const { treeZoom: zoom } = useViewSettings()
   const dragons = listDragons(project)
+  const childrenIndex = useMemo(() => buildChildrenIndex(project), [project])
   // Tree stays on the last linked focus even while an unlinked create is selected.
   const focusId =
     (viewFocusId && project.dragons[viewFocusId] ? viewFocusId : null) ??
@@ -843,12 +864,18 @@ export function TreeCanvas({
     dragon: Dragon,
     options: { selected: boolean; focused?: boolean; style?: CSSProperties },
   ) {
+    const relation =
+      selectedDragonId && !options.selected
+        ? kinshipLabel(project, selectedDragonId, dragon.id, childrenIndex)
+        : null
+
     return (
       <DragonNode
         key={dragon.id}
         dragon={dragon}
         selected={options.selected}
         focused={options.focused}
+        relationLabel={relation}
         style={options.style}
         onSelect={() => onSelectDragon(dragon.id)}
         onNodePointerDown={

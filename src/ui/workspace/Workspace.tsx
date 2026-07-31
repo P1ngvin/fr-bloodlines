@@ -18,6 +18,7 @@ import {
   patchDragon,
   projectHasContent,
   renameProject,
+  replaceProject,
   useProject,
   wasLastPersistSuccessful,
 } from '../../state/projectStore'
@@ -35,8 +36,14 @@ import {
 } from '../../state/viewSettingsStore'
 import { ProjectLoadError } from '../../data/serialization/loadProject'
 import {
+  FrDragonPageParseError,
+  mergeFrDragonPage,
+  parseFrDragonPage,
+} from '../../importers/frDragonPage'
+import {
   downloadProjectJson,
   openProjectJsonFile,
+  pickFrDragonPageFiles,
   pickProjectJsonFile,
 } from '../../storage/fileIo'
 import { TopBar, type MenuAction } from '../chrome/TopBar'
@@ -217,6 +224,56 @@ export function Workspace() {
     }
   }
 
+  async function handleImportDragonPages() {
+    const files = await pickFrDragonPageFiles()
+    if (files.length === 0) return
+
+    let project = getProject()
+    let lastMainId: string | null = null
+    let imported = 0
+    let created = 0
+    let updated = 0
+    const errors: string[] = []
+
+    for (const file of files) {
+      try {
+        const text = await file.text()
+        const page = parseFrDragonPage(text)
+        const merged = mergeFrDragonPage(project, page)
+        if (!merged.ok) {
+          errors.push(`${file.name}: ${merged.error}`)
+          continue
+        }
+        project = merged.project
+        lastMainId = merged.summary.mainId
+        imported += 1
+        created += merged.summary.created
+        updated += merged.summary.updated
+      } catch (error) {
+        const message =
+          error instanceof FrDragonPageParseError
+            ? error.message
+            : 'Could not read that file.'
+        errors.push(`${file.name}: ${message}`)
+      }
+    }
+
+    if (imported > 0) {
+      replaceProject(project)
+      if (lastMainId) selectDragon(lastMainId, getProject())
+      const bits = [`Imported ${imported} page${imported === 1 ? '' : 's'}`]
+      if (created) bits.push(`${created} new`)
+      if (updated) bits.push(`${updated} updated`)
+      setStatus(
+        errors.length > 0
+          ? `${bits.join(' · ')}. Some files failed.`
+          : `${bits.join(' · ')}.`,
+      )
+    } else if (errors.length > 0) {
+      showError(errors[0]!)
+    }
+  }
+
   async function handleMenuAction(action: MenuAction) {
     setMenuOpen(false)
     setCanvasMenu(null)
@@ -317,6 +374,17 @@ export function Workspace() {
           onCloseMenu={() => setCanvasMenu(null)}
           onMenuAction={handleCanvasMenuAction}
         />
+
+        <button
+          type="button"
+          className="workspace__import"
+          title="Import a downloaded Flight Rising dragon page (.mhtml or .html)"
+          onClick={() => {
+            void handleImportDragonPages()
+          }}
+        >
+          Import dragon's page
+        </button>
       </div>
 
       <SettingsDialog

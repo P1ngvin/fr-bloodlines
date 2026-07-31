@@ -35,6 +35,8 @@ export type { FocusTreeOptions } from './buildFocusTree'
 export { buildStableTree, isUnlinkedIsolate } from './buildStableTree'
 export type { StableTreeOptions } from './buildStableTree'
 
+export { kinshipLabel } from './kinshipLabel'
+
 export type {
   TreeLayout,
   TreeLayoutNode,

@@ -74,7 +74,7 @@ function validateDragon(value: unknown, expectedId: string): Dragon {
   const sex = value.sex
   if (!isDragonSex(sex)) {
     throw new ProjectLoadError(
-      `Invalid project: dragon "${id}" has an unknown sex.`,
+      `Invalid project: dragon "${id}" has an invalid sex.`,
     )
   }
 

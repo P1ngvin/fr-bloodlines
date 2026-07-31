@@ -29,31 +29,53 @@ export function openProjectJsonFile(file: File): Promise<ProjectFile> {
  * Resolves null if the user cancels.
  */
 export function pickProjectJsonFile(): Promise<File | null> {
+  return pickFiles({
+    accept: 'application/json,.json',
+    multiple: false,
+  }).then((files) => files[0] ?? null)
+}
+
+/**
+ * Pick one or more downloaded Flight Rising dragon pages (.mhtml / .html).
+ * Resolves an empty array if the user cancels.
+ */
+export function pickFrDragonPageFiles(): Promise<File[]> {
+  return pickFiles({
+    accept: '.mhtml,.mht,.html,.htm,multipart/related,text/html',
+    multiple: true,
+  })
+}
+
+function pickFiles(options: {
+  accept: string
+  multiple: boolean
+}): Promise<File[]> {
   return new Promise((resolve) => {
     const input = document.createElement('input')
     input.type = 'file'
-    input.accept = 'application/json,.json'
+    input.accept = options.accept
+    input.multiple = options.multiple
     input.style.display = 'none'
 
     let settled = false
 
-    function finish(file: File | null) {
+    function finish(files: File[]) {
       if (settled) return
       settled = true
       window.removeEventListener('focus', onFocus)
       input.remove()
-      resolve(file)
+      resolve(files)
     }
 
     function onFocus() {
       // Cancel detection: focus returns without a change event.
       window.setTimeout(() => {
-        if (!settled) finish(null)
+        if (!settled) finish([])
       }, 300)
     }
 
     input.addEventListener('change', () => {
-      finish(input.files?.[0] ?? null)
+      finish(Array.from(input.files ?? []))
     })
 
     document.body.appendChild(input)

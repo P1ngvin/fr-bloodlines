@@ -1,9 +1,9 @@
 /** Matches .dragon-node box and TreeCanvas packing at --tree-zoom: 1. */
 export const FREE_NODE_W = 100
-export const FREE_NODE_H = 116
+export const FREE_NODE_H = 132
 
-export const LAYOUT_CELL_W = 118
-export const LAYOUT_GEN_GAP = 88
+export const LAYOUT_CELL_W = 112
+export const LAYOUT_GEN_GAP = 40
 export const LAYOUT_CELL_H = FREE_NODE_H + LAYOUT_GEN_GAP
 export const LAYOUT_PAD_X = 48
 export const LAYOUT_PAD_Y = 48

@@ -192,6 +192,12 @@ export function deleteDragon(dragonId: string): RelationResult {
   return applyRelation(removeDragon(projectFile.project, dragonId))
 }
 
+export function replaceProject(project: Project): void {
+  replaceProjectFile(
+    toProjectFile(project, { createdWith: projectFile.createdWith }),
+  )
+}
+
 export function useProjectFile(): ProjectFile {
   return useSyncExternalStore(subscribeProject, getProjectFile, getProjectFile)
 }

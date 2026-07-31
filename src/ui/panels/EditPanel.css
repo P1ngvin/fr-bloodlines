@@ -31,6 +31,49 @@
   border-radius: 0;
 }
 
+.edit-form__id-row {
+  display: flex;
+  gap: 0.4rem;
+  align-items: stretch;
+}
+
+.edit-form__id-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.edit-form__open-page {
+  appearance: none;
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--line);
+  background: var(--paper-lift);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.edit-form__open-page:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.edit-form__open-page:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.edit-form__open-page:focus-visible {
+  outline: 1.5px solid var(--focus);
+  outline-offset: 1px;
+}
+
 .edit-form__field textarea {
   resize: vertical;
   min-height: 5rem;

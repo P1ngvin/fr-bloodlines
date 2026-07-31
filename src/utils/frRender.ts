@@ -1,9 +1,11 @@
 /**
  * Flight Rising dragon id helpers.
- * The app never scrapes FR — users type the id; we only build the render URL.
+ * The app never scrapes FR. Users type the id or import a page they downloaded;
+ * we only build the render URL from the id.
  */
 
-const RENDER_HOST = 'https://www1.flightrising.com/rendern'
+const SITE_HOST = 'https://www1.flightrising.com'
+const RENDER_HOST = `${SITE_HOST}/rendern`
 const DEFAULT_SIZE = 350
 
 type RenderCrop = 'full' | 'portrait'
@@ -15,6 +17,13 @@ export function normalizeFrId(raw: string): string {
 
 export function isValidFrId(frId: string): boolean {
   return /^\d+$/.test(frId)
+}
+
+/** Profile URL for a dragon id, or empty when the id is missing/invalid. */
+export function getDragonPageUrl(frId: string): string {
+  const id = normalizeFrId(frId)
+  if (!isValidFrId(id)) return ''
+  return `${SITE_HOST}/dragon/${id}`
 }
 
 /**

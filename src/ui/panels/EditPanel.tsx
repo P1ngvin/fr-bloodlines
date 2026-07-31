@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { Dragon, DragonSex, ImageCropMode, Project } from '../../data/models'
 import { DRAGON_SEXES, IMAGE_CROP_MODES } from '../../data/models'
 import { searchDragons } from '../../utils/dragonSearch'
+import { getDragonPageUrl } from '../../utils/frRender'
 import { normalizeDisplayName } from '../../utils/text'
 import './SidePanel.css'
 import './EditPanel.css'
@@ -44,6 +45,8 @@ export function EditPanel({
     setQuery('')
     setOpen(false)
   }
+
+  const pageUrl = selected ? getDragonPageUrl(selected.frId) : ''
 
   return (
     <aside className="side-panel" aria-label="Dragon editor">
@@ -129,19 +132,37 @@ export function EditPanel({
               />
             </label>
 
-            <label className="edit-form__field">
+            <div className="edit-form__field">
               <span>Dragon ID</span>
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                placeholder="e.g. 22389889"
-                value={selected.frId}
-                onChange={(event) =>
-                  onPatch({ frId: event.target.value.replace(/\D/g, '') })
-                }
-              />
-            </label>
+              <div className="edit-form__id-row">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  placeholder="e.g. 22389889"
+                  value={selected.frId}
+                  aria-label="Dragon ID"
+                  onChange={(event) =>
+                    onPatch({ frId: event.target.value.replace(/\D/g, '') })
+                  }
+                />
+                <button
+                  type="button"
+                  className="edit-form__open-page"
+                  disabled={!pageUrl}
+                  title={
+                    pageUrl
+                      ? 'Open Flight Rising page'
+                      : 'Enter a Dragon ID first'
+                  }
+                  onClick={() => {
+                    if (pageUrl) window.open(pageUrl, '_blank', 'noopener,noreferrer')
+                  }}
+                >
+                  Open page
+                </button>
+              </div>
+            </div>
 
             <label className="edit-form__field">
               <span>Sex</span>
@@ -153,7 +174,11 @@ export function EditPanel({
               >
                 {DRAGON_SEXES.map((sex) => (
                   <option key={sex} value={sex}>
-                    {sex === 'female' ? 'Female' : 'Male'}
+                    {sex === 'female'
+                      ? 'Female'
+                      : sex === 'male'
+                        ? 'Male'
+                        : 'Unknown'}
                   </option>
                 ))}
               </select>

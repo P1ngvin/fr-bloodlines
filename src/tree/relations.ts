@@ -188,6 +188,9 @@ export function linkAsParent(
 ): RelationResult {
   const parent = project.dragons[parentId]
   if (!parent) return { ok: false, error: 'Dragon not found.' }
+  if (parent.sex === 'unknown') {
+    return { ok: false, error: 'Set this dragon\'s sex before linking as a parent.' }
+  }
   if (parent.sex === 'female') return setMother(project, childId, parentId)
   return setFather(project, childId, parentId)
 }
@@ -279,6 +282,7 @@ export function shareBothParents(a: Dragon, b: Dragon): boolean {
 }
 
 export function canLinkAsParent(parent: Dragon, child: Dragon): boolean {
+  if (parent.sex === 'unknown') return false
   if (parent.sex === 'female') return child.motherId === null
   return child.fatherId === null
 }
@@ -337,6 +341,9 @@ export function createChildOf(
   const parent = project.dragons[parentId]
   if (!parent) {
     return { ok: false, error: 'Parent dragon does not exist.' }
+  }
+  if (parent.sex === 'unknown') {
+    return { ok: false, error: 'Set this dragon\'s sex before adding a child.' }
   }
 
   const link =

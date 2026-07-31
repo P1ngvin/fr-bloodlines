@@ -3,7 +3,7 @@ import type { ChildrenIndex } from './graph'
 export type LayoutSlot = { generation: number; x: number }
 
 /** Extra layout units between sibling subtrees (leaf siblings → Δx = 1 + gap). */
-export const SIBLING_GAP = 1
+export const SIBLING_GAP = 0
 
 export function packSubtree(
   id: string,
