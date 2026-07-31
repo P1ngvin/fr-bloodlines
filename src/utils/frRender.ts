@@ -6,6 +6,8 @@
 const RENDER_HOST = 'https://www1.flightrising.com/rendern'
 const DEFAULT_SIZE = 350
 
+type RenderCrop = 'full' | 'portrait'
+
 /** Keep digits only (users may paste ids with spaces). */
 export function normalizeFrId(raw: string): string {
   return raw.trim().replace(/\D/g, '')
@@ -19,8 +21,8 @@ export function isValidFrId(frId: string): boolean {
  * FR stores renders in numbered folders:
  * folder = ceil(dragonId / 100)
  *
- * Example: id 22389889 →
- * https://www1.flightrising.com/rendern/350/223899/22389889_350.png
+ * Full:     .../rendern/350/223899/22389889_350.png
+ * Portrait: .../rendern/portraits/505122/50512147p.png
  */
 export function getFrRenderFolder(frId: string): string {
   const id = Number(normalizeFrId(frId))
@@ -30,11 +32,15 @@ export function getFrRenderFolder(frId: string): string {
 
 export function getDragonRenderUrl(
   frId: string,
+  crop: RenderCrop = 'portrait',
   size: number = DEFAULT_SIZE,
 ): string {
   const id = normalizeFrId(frId)
   const folder = getFrRenderFolder(id)
   if (!id || !folder) return ''
+  if (crop === 'portrait') {
+    return `${RENDER_HOST}/portraits/${folder}/${id}p.png`
+  }
   return `${RENDER_HOST}/${size}/${folder}/${id}_${size}.png`
 }
 
@@ -44,6 +50,11 @@ export function extractFrIdFromRenderUrl(url: string): string {
   if (!trimmed) return ''
 
   if (/^\d+$/.test(trimmed)) return trimmed
+
+  const portrait = trimmed.match(
+    /\/rendern\/portraits\/\d+\/(\d+)p\.(?:png|jpe?g)/i,
+  )
+  if (portrait?.[1]) return portrait[1]
 
   const withExt = trimmed.match(/\/rendern\/\d+\/\d+\/(\d+)_\d+\.(?:png|jpe?g)/i)
   if (withExt?.[1]) return withExt[1]

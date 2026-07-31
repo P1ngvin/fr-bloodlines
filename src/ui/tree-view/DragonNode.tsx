@@ -23,7 +23,7 @@ export function DragonNode({
   onContextMenu,
   onNodePointerDown,
 }: DragonNodeProps) {
-  const imageUrl = getDragonRenderUrl(dragon.frId)
+  const imageUrl = getDragonRenderUrl(dragon.frId, dragon.imageCrop)
   const className = [
     'dragon-node',
     selected ? 'dragon-node--selected' : '',

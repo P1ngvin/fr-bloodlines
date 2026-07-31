@@ -169,7 +169,7 @@ export function EditPanel({
               >
                 {IMAGE_CROP_MODES.map((mode) => (
                   <option key={mode} value={mode}>
-                    {mode}
+                    {mode === 'full' ? 'Full' : 'Portrait'}
                   </option>
                 ))}
               </select>

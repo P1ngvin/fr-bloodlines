@@ -40,13 +40,15 @@ Format changes require a migration under `data/migrations/`. Saves always use th
 
 ## Images
 
-Users enter a Flight Rising **dragon ID**. The app builds the render URL:
+Users enter a Flight Rising **dragon ID**. The app builds a render URL from `imageCrop`:
 
-`https://www1.flightrising.com/rendern/350/{ceil(id/100)}/{id}_350.png`
+- **Full:** `https://www1.flightrising.com/rendern/350/{ceil(id/100)}/{id}_350.png`
+- **Portrait:** `https://www1.flightrising.com/rendern/portraits/{ceil(id/100)}/{id}p.png`
 
-Example: `22389889` → `.../rendern/350/223899/22389889_350.png`
+Examples: `22389889` → `.../rendern/350/223899/22389889_350.png`;  
+`50512147` → `.../rendern/portraits/505122/50512147p.png`
 
-The app never scrapes FR pages. Cropping (`imageCrop`) is a UI concern; exporters do not process images.
+The app never scrapes FR pages. Exporters do not process images.
 
 ## Focus tree
 
