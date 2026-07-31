@@ -505,7 +505,6 @@ function sharedChildrenMid(
 function buildRowBlocks(
   project: Project,
   placed: Map<string, LayoutSlot>,
-  childrenIndex: ReturnType<typeof buildChildrenIndex>,
   generation: number,
   desiredX: (ids: string[]) => number,
 ): CoupleBlock[] {
@@ -538,7 +537,6 @@ function buildRowBlocks(
 /** Place blocks left-to-right, each centered on sortKey when space allows. */
 function placeRowBlocks(
   placed: Map<string, LayoutSlot>,
-  generation: number,
   blocks: CoupleBlock[],
   step: number,
 ) {
@@ -599,7 +597,6 @@ function layoutCouplesOnRows(
     const blocks = buildRowBlocks(
       project,
       placed,
-      childrenIndex,
       generation,
       (ids) => {
         if (ids.length === 2) {
@@ -627,7 +624,7 @@ function layoutCouplesOnRows(
           2
       }
     }
-    placeRowBlocks(placed, generation, blocks, step)
+    placeRowBlocks(placed, blocks, step)
   }
 
   // Top-down: pull each block toward ancestors + children, still as a unit.
@@ -635,7 +632,6 @@ function layoutCouplesOnRows(
     const blocks = buildRowBlocks(
       project,
       placed,
-      childrenIndex,
       generation,
       (ids) => {
         const targets: number[] = []
@@ -668,166 +664,7 @@ function layoutCouplesOnRows(
         return avg(ids.map((id) => placed.get(id)!.x))
       },
     )
-    placeRowBlocks(placed, generation, blocks, step)
-  }
-}
-
-/**
- * After generation sync / couple nudges, two dragons can share a cell.
- * Push later ids right on that row until every pair has at least one step gap.
- */
-function resolveOverlaps(placed: Map<string, LayoutSlot>) {
-  const step = 1 + SIBLING_GAP
-
-  for (let iter = 0; iter < 24; iter++) {
-    let changed = false
-    const byGen = new Map<number, { id: string; x: number }[]>()
-
-    for (const [id, slot] of placed) {
-      const row = byGen.get(slot.generation) ?? []
-      row.push({ id, x: slot.x })
-      byGen.set(slot.generation, row)
-    }
-
-    for (const row of byGen.values()) {
-      row.sort((a, b) => a.x - b.x || a.id.localeCompare(b.id))
-      for (let i = 1; i < row.length; i++) {
-        const prev = row[i - 1]!
-        const curr = row[i]!
-        if (curr.x - prev.x >= step - 1e-6) continue
-        const target = prev.x + step
-        const slot = placed.get(curr.id)
-        if (!slot) continue
-        placed.set(curr.id, { generation: slot.generation, x: target })
-        curr.x = target
-        changed = true
-      }
-    }
-
-    if (!changed) break
-  }
-}
-
-/**
- * Kids of one parent with different co-parents (Belthil×Sidhe vs Belthil×Morilinde)
- * get an extra horizontal gap so their couple bars do not touch.
- */
-function separateCoParentGroups(
-  project: Project,
-  placed: Map<string, LayoutSlot>,
-  childrenIndex: ReturnType<typeof buildChildrenIndex>,
-) {
-  const step = 1 + SIBLING_GAP
-  // Small pad between half-sibling clusters so couple rails do not merge.
-  const extra = 0.5
-
-  for (const parentId of Object.keys(project.dragons)) {
-    const childIds = (childrenIndex[parentId] ?? []).filter((id) =>
-      placed.has(id),
-    )
-    if (childIds.length < 2) continue
-
-    const groups = new Map<string, string[]>()
-    for (const childId of childIds) {
-      const child = project.dragons[childId]
-      if (!child) continue
-      const other =
-        child.motherId === parentId
-          ? (child.fatherId ?? 'solo')
-          : (child.motherId ?? 'solo')
-      const list = groups.get(other) ?? []
-      list.push(childId)
-      groups.set(other, list)
-    }
-    if (groups.size < 2) continue
-
-    const ordered = [...groups.values()]
-      .map((ids) => {
-        const xs = ids.map((id) => placed.get(id)!.x)
-        return {
-          ids,
-          minX: Math.min(...xs),
-          maxX: Math.max(...xs),
-        }
-      })
-      .sort((a, b) => a.minX - b.minX)
-
-    for (let i = 1; i < ordered.length; i++) {
-      const prev = ordered[i - 1]!
-      const curr = ordered[i]!
-      const need = prev.maxX + step + extra
-      if (curr.minX >= need - 1e-6) continue
-      const delta = need - curr.minX
-      for (const id of curr.ids) {
-        shiftNodeAndDescendants(id, delta, childrenIndex, placed)
-      }
-      curr.minX += delta
-      curr.maxX += delta
-    }
-  }
-}
-
-/**
- * If a dragon sits directly under someone who is not their parent, move them.
- * Stops mates (Nila under Sidhe) from reading as parent→child.
- */
-function unstackFromNonParents(
-  project: Project,
-  placed: Map<string, LayoutSlot>,
-) {
-  const step = 1 + SIBLING_GAP
-
-  for (let iter = 0; iter < 12; iter++) {
-    let changed = false
-
-    for (const [id, slot] of [...placed.entries()]) {
-      const dragon = project.dragons[id]
-      if (!dragon) continue
-
-      const above = [...placed.entries()].find(
-        ([otherId, other]) =>
-          otherId !== id &&
-          Math.abs(other.x - slot.x) < 0.51 &&
-          other.generation === slot.generation - 1,
-      )
-      if (!above) continue
-
-      const [aboveId] = above
-      if (dragon.motherId === aboveId || dragon.fatherId === aboveId) continue
-
-      const taken = (tx: number) =>
-        [...placed.entries()].some(
-          ([otherId, other]) =>
-            otherId !== id &&
-            other.generation === slot.generation &&
-            Math.abs(other.x - tx) < 0.51,
-        ) ||
-        [...placed.entries()].some(
-          ([otherId, other]) =>
-            otherId !== id &&
-            other.generation === slot.generation - 1 &&
-            Math.abs(other.x - tx) < 0.51,
-        )
-
-      let nextX: number | null = null
-      for (let ring = 1; ring <= 16; ring++) {
-        const right = slot.x + ring * step
-        const left = slot.x - ring * step
-        if (!taken(right)) {
-          nextX = right
-          break
-        }
-        if (!taken(left)) {
-          nextX = left
-          break
-        }
-      }
-      if (nextX === null || Math.abs(nextX - slot.x) < 1e-6) continue
-      placed.set(id, { generation: slot.generation, x: nextX })
-      changed = true
-    }
-
-    if (!changed) break
+    placeRowBlocks(placed, blocks, step)
   }
 }
 
