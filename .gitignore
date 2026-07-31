@@ -26,5 +26,8 @@ dist-ssr
 _deploy_out.txt
 _git_status.txt
 _gh_setup.txt
+_gh_auth.txt
+_gh_fail.txt
+_npm_out.txt
 _setup_gh.cmd
 .tools/
