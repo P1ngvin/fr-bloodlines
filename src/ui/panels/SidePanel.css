@@ -1,0 +1,41 @@
+.side-panel {
+  width: min(19rem, 100%);
+  flex-shrink: 0;
+  padding: 1.25rem 1.2rem 1.5rem;
+  background: var(--paper-lift);
+  border-right: 1px solid var(--line);
+  overflow: auto;
+}
+
+.side-panel__kicker {
+  margin: 0 0 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.side-panel__title {
+  margin: 0 0 0.65rem;
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+.side-panel__body {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+
+@media (max-width: 720px) {
+  .side-panel {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+  }
+}

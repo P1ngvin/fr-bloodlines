@@ -1,0 +1,129 @@
+.welcome {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  padding: 1.5rem;
+  background:
+    radial-gradient(ellipse at 50% 20%, rgba(255, 255, 255, 0.4), transparent 50%),
+    var(--paper);
+  color: var(--ink);
+}
+
+.welcome__card {
+  width: min(22rem, 100%);
+}
+
+.welcome__brand {
+  margin: 0 0 0.85rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.welcome__title {
+  margin: 0 0 0.45rem;
+  font-size: 1.55rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.welcome__body {
+  margin: 0 0 1.35rem;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.welcome__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.welcome__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.welcome__field input {
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--ink);
+  background: var(--paper-lift);
+  border: 1px solid var(--line);
+  padding: 0.55rem 0.6rem;
+}
+
+.welcome__field input:focus {
+  outline: 1.5px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.welcome__primary,
+.welcome__secondary {
+  appearance: none;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.55rem 0.75rem;
+  cursor: pointer;
+}
+
+.welcome__primary {
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #f7f4ef;
+}
+
+.welcome__primary:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.welcome__secondary {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: var(--paper-lift);
+  color: var(--ink);
+}
+
+.welcome__secondary:hover {
+  border-color: color-mix(in srgb, var(--ink) 28%, transparent);
+}
+
+.welcome__divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1rem 0;
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+}
+
+.welcome__divider::before,
+.welcome__divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.welcome__error {
+  margin: 0.9rem 0 0;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: var(--accent);
+}

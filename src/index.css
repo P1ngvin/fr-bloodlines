@@ -1,0 +1,52 @@
+@import url('https://fonts.googleapis.com/css2?family=Commissioner:wght@400;500;600;700&display=swap');
+
+:root {
+  --font: 'Commissioner', 'Segoe UI', sans-serif;
+
+  --ink: #16151c;
+  --ink-soft: #5a5666;
+  --paper: #ece8e1;
+  --paper-lift: #f7f4ef;
+  --line: rgba(22, 21, 28, 0.1);
+  --accent: #6e2e36;
+  --accent-hover: #8a3c46;
+  --focus: #4d5d73;
+
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--ink);
+  background: var(--paper);
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font-family: inherit;
+}
+
+:focus-visible {
+  outline: 1.5px solid var(--focus);
+  outline-offset: 3px;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 25%, transparent);
+}

@@ -1,0 +1,139 @@
+.edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.edit-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.edit-form__field input,
+.edit-form__field select,
+.edit-form__field textarea {
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  padding: 0.45rem 0.5rem;
+  border-radius: 0;
+}
+
+.edit-form__field textarea {
+  resize: vertical;
+  min-height: 5rem;
+  line-height: 1.45;
+}
+
+.edit-form__field input:focus,
+.edit-form__field select:focus,
+.edit-form__field textarea:focus {
+  outline: 1.5px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.dragon-search {
+  position: relative;
+  margin: 0 0 1.1rem;
+}
+
+.dragon-search__label {
+  display: block;
+  margin: 0 0 0.3rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.dragon-search__input {
+  box-sizing: border-box;
+  width: 100%;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  padding: 0.45rem 0.5rem;
+}
+
+.dragon-search__input:focus {
+  outline: 1.5px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.dragon-search__results {
+  position: absolute;
+  z-index: 4;
+  left: 0;
+  right: 0;
+  top: calc(100% + 0.2rem);
+  margin: 0;
+  padding: 0.2rem 0;
+  list-style: none;
+  max-height: 14rem;
+  overflow: auto;
+  background: var(--paper-lift);
+  border: 1px solid var(--line);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--ink) 12%, transparent);
+}
+
+.dragon-search__hit {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.45rem 0.55rem;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dragon-search__hit:hover,
+.dragon-search__hit:focus-visible {
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+
+.dragon-search__hit-name {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.dragon-search__hit-id {
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.dragon-search__empty {
+  position: absolute;
+  z-index: 4;
+  left: 0;
+  right: 0;
+  top: calc(100% + 0.2rem);
+  margin: 0;
+  padding: 0.55rem 0.6rem;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  background: var(--paper-lift);
+  border: 1px solid var(--line);
+}

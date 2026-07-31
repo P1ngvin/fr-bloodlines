@@ -1,0 +1,66 @@
+.dragon-node {
+  appearance: none;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(0.35rem * var(--tree-zoom, 1));
+  width: calc(6.25rem * var(--tree-zoom, 1));
+  height: calc(7.25rem * var(--tree-zoom, 1));
+  padding: calc(0.4rem * var(--tree-zoom, 1));
+  border: 1px solid transparent;
+  background: color-mix(in srgb, var(--paper-lift) 92%, transparent);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+  text-align: center;
+  z-index: 1;
+}
+
+.dragon-node:hover {
+  border-color: var(--line);
+}
+
+.dragon-node--selected {
+  border-color: var(--accent);
+  background: var(--paper-lift);
+}
+
+.dragon-node--focused {
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.dragon-node__portrait {
+  display: block;
+  width: calc(5.1rem * var(--tree-zoom, 1));
+  height: calc(5.1rem * var(--tree-zoom, 1));
+  overflow: hidden;
+  background: color-mix(in srgb, var(--paper) 80%, #bbb);
+}
+
+.dragon-node__portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  display: block;
+}
+
+.dragon-node__placeholder {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background:
+    linear-gradient(135deg, transparent 48%, var(--line) 48%, var(--line) 52%, transparent 52%),
+    color-mix(in srgb, var(--paper) 70%, #aaa);
+}
+
+.dragon-node__name {
+  font-size: calc(0.75rem * var(--tree-zoom, 1));
+  font-weight: 600;
+  line-height: 1.25;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

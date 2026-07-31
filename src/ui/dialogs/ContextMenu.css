@@ -1,0 +1,43 @@
+.context-menu {
+  position: fixed;
+  z-index: 100;
+  min-width: 11.5rem;
+  padding: 0.3rem 0;
+  background: var(--paper-lift);
+  border: 1px solid var(--line);
+  box-shadow: 0 6px 20px rgba(22, 21, 28, 0.12);
+}
+
+.context-menu__item {
+  appearance: none;
+  display: block;
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  font-size: 0.88rem;
+  color: var(--ink);
+  padding: 0.4rem 0.85rem;
+  cursor: pointer;
+}
+
+.context-menu__item:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+}
+
+.context-menu__item:disabled {
+  color: var(--ink-soft);
+  opacity: 0.45;
+  cursor: default;
+}
+
+.context-menu__item--danger {
+  color: var(--accent);
+}
+
+.context-menu__sep {
+  height: 1px;
+  margin: 0.3rem 0.65rem;
+  background: var(--line);
+}
