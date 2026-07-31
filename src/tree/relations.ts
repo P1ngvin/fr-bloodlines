@@ -203,7 +203,7 @@ export function linkAsChild(
 
 /**
  * Mark A and B as siblings via a shared siblingGroupId.
- * Does not copy parents - a shared parent (and the pedigree fork) only appears
+ * Does not copy parents - a shared parent (and the lineage fork) only appears
  * when the player explicitly links someone as parent of both.
  */
 export function linkAsSiblings(

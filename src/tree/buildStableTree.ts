@@ -19,7 +19,7 @@ export type StableTreeOptions = {
 }
 
 /**
- * Stable pedigree layout for edit mode.
+ * Stable lineage layout for edit mode.
  * Roots sit at the top; children flow downward.
  * Selecting or renaming a dragon does not re-root or reshuffle packing order.
  *
@@ -27,7 +27,7 @@ export type StableTreeOptions = {
  * a mate/root cannot pull an existing child up a generation.
  *
  * Explicit sibling groups sit on one row with a horizontal link until a shared
- * parent is confirmed (then the pedigree fork appears via parent edges).
+ * parent is confirmed (then the lineage fork appears via parent edges).
  *
  * Unlinked isolates (no parents, children, or sibling group) stay out of the
  * packed layout so Create dragon can place them freely on the canvas.

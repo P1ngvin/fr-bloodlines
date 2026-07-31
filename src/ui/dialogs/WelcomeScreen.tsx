@@ -14,7 +14,7 @@ export function WelcomeScreen({ error, onCreate, onOpen }: WelcomeScreenProps) {
     <div className="welcome">
       <div className="welcome__card">
         <p className="welcome__brand">Bloodlines</p>
-        <h1 className="welcome__title">Start a pedigree</h1>
+        <h1 className="welcome__title">Start a lineage</h1>
         <p className="welcome__body">
           Create a new project or open a JSON backup from your computer.
         </p>
@@ -32,7 +32,6 @@ export function WelcomeScreen({ error, onCreate, onOpen }: WelcomeScreenProps) {
               type="text"
               value={name}
               autoFocus
-              placeholder="e.g. Ice flight line"
               onChange={(event) => setName(event.target.value)}
             />
           </label>

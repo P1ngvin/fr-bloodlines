@@ -1,6 +1,6 @@
 # FR Bloodlines
 
-Browser-based dragon pedigree editor for Flight Rising.
+Browser-based dragon lineage editor for Flight Rising.
 
 Static site for **GitHub Pages**. No backend, no authentication. Projects are JSON files; BBCode export is one feature among others.
 

@@ -1,6 +1,6 @@
 # Architecture
 
-FR Bloodlines is a browser-only dragon pedigree editor for Flight Rising.
+FR Bloodlines is a browser-only dragon lineage editor for Flight Rising.
 JSON is the canonical project format. BBCode export is one feature, not the product.
 
 ## Layers
