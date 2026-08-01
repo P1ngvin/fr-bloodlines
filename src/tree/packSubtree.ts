@@ -1,9 +1,36 @@
+import type { Project } from '../data/models'
 import type { ChildrenIndex } from './graph'
 
 export type LayoutSlot = { generation: number; x: number }
 
 /** Extra layout units between sibling subtrees (leaf siblings → Δx = 1 + gap). */
 export const SIBLING_GAP = 0
+
+/**
+ * Order children so each parental pair is contiguous.
+ * Different pairs under a shared parent stay as separate blocks (A×B | B×C).
+ */
+function orderChildrenByParentalPair(
+  project: Project,
+  childIds: string[],
+): string[] {
+  const groups = new Map<string, string[]>()
+  for (const childId of childIds) {
+    const child = project.dragons[childId]
+    const key = child
+      ? `${child.motherId ?? ''}\0${child.fatherId ?? ''}`
+      : childId
+    const list = groups.get(key) ?? []
+    list.push(childId)
+    groups.set(key, list)
+  }
+  const keys = [...groups.keys()].sort((a, b) => a.localeCompare(b))
+  const ordered: string[] = []
+  for (const key of keys) {
+    ordered.push(...(groups.get(key) ?? []))
+  }
+  return ordered
+}
 
 export function packSubtree(
   id: string,
@@ -12,9 +39,12 @@ export function packSubtree(
   childrenIndex: ChildrenIndex,
   placed: Map<string, LayoutSlot>,
   addEdge: (parentId: string, childId: string) => void,
+  project: Project,
 ): { width: number; center: number } {
   const childIds =
-    generation >= maxGeneration ? [] : (childrenIndex[id] ?? [])
+    generation >= maxGeneration
+      ? []
+      : orderChildrenByParentalPair(project, childrenIndex[id] ?? [])
 
   if (childIds.length === 0) {
     placed.set(id, { generation, x: 0 })
@@ -30,6 +60,7 @@ export function packSubtree(
       childrenIndex,
       placed,
       addEdge,
+      project,
     )
     parts.push({ id: childId, ...part })
     addEdge(id, childId)
@@ -88,6 +119,14 @@ function shiftSubtree(
   }
 }
 
+/** Half-step brick offset for odd rows relative to minGeneration. */
+export function generationStagger(
+  generation: number,
+  minGeneration: number,
+): number {
+  return Math.abs(generation - minGeneration) % 2 === 1 ? 0.5 : 0
+}
+
 export function normalizePlaced(
   placed: Map<string, LayoutSlot>,
 ): {
@@ -108,7 +147,9 @@ export function normalizePlaced(
   const nodes = [...placed.entries()].map(([dragonId, slot]) => ({
     dragonId,
     generation: slot.generation,
-    x: slot.x - minX,
+    // Brick layout: each new generation shifts half a step so couple mids
+    // and child card centers do not share a column.
+    x: slot.x - minX + generationStagger(slot.generation, minGeneration),
   }))
 
   nodes.sort((a, b) => a.generation - b.generation || a.x - b.x)

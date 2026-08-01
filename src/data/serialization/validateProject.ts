@@ -1,5 +1,10 @@
 import type { Dragon, Project, ProjectFile } from '../models'
-import { isDragonSex, isImageCropMode } from '../models'
+import {
+  isDragonElement,
+  isDragonSex,
+  isImageCropMode,
+  normalizeBirthDate,
+} from '../models'
 import { ProjectLoadError } from '../migrations/migrate'
 import { CURRENT_FORMAT_VERSION } from '../../version'
 
@@ -83,10 +88,19 @@ function validateDragon(value: unknown, expectedId: string): Dragon {
     name: assertString(value.name, `dragon "${id}" name`),
     frId: assertString(value.frId, `dragon "${id}" frId`),
     sex,
+    pronouns:
+      typeof value.pronouns === 'string' ? value.pronouns.trim() : '',
+    birthDate:
+      typeof value.birthDate === 'string'
+        ? normalizeBirthDate(value.birthDate)
+        : '',
     imageCrop,
     frameId: assertString(value.frameId, `dragon "${id}" frameId`),
     motherId: assertParentId(value.motherId, `dragon "${id}" motherId`),
     fatherId: assertParentId(value.fatherId, `dragon "${id}" fatherId`),
+    parentsNone: value.parentsNone === true,
+    exalted: value.exalted === true,
+    element: isDragonElement(value.element) ? value.element : '',
     siblingGroupId: assertParentId(
       value.siblingGroupId,
       `dragon "${id}" siblingGroupId`,

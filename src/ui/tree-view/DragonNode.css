@@ -1,20 +1,136 @@
 .dragon-node {
   appearance: none;
   box-sizing: border-box;
+  position: relative;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: calc(0.35rem * var(--tree-zoom, 1));
   width: calc(6.25rem * var(--tree-zoom, 1));
-  height: calc(8.25rem * var(--tree-zoom, 1));
+  height: calc(9.75rem * var(--tree-zoom, 1));
   padding: calc(0.4rem * var(--tree-zoom, 1));
   border: 1px solid transparent;
-  background: color-mix(in srgb, var(--paper-lift) 92%, transparent);
+  background: var(--paper-lift);
   color: var(--ink);
   font: inherit;
   cursor: pointer;
   text-align: center;
   z-index: 1;
+  overflow: hidden;
+}
+
+/* FR dragon-card element strip along the bottom of the card. */
+.dragon-node__element-bg {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: auto;
+  background: var(--dragon-element-fallback, transparent);
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+  line-height: 0;
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(0, 0, 0, 0.35) 40%,
+    #000 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(0, 0, 0, 0.35) 40%,
+    #000 100%
+  );
+}
+
+.dragon-node__element-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  object-position: center bottom;
+}
+
+.dragon-node--element > :not(.dragon-node__element-bg) {
+  position: relative;
+  z-index: 1;
+}
+
+.dragon-node--lod-portrait .dragon-node__element-bg {
+  opacity: 0.7;
+}
+
+.dragon-node--dimmed .dragon-node__element-bg {
+  opacity: 0.4;
+}
+
+/* Zoomed-out LODs: smaller chrome, less visual noise. */
+.dragon-node--lod-named {
+  height: calc(7.35rem * var(--tree-zoom, 1));
+}
+
+.dragon-node--lod-portrait {
+  gap: 0;
+  width: calc(5.4rem * var(--tree-zoom, 1));
+  height: calc(5.4rem * var(--tree-zoom, 1));
+  padding: calc(0.2rem * var(--tree-zoom, 1));
+}
+
+.dragon-node--lod-portrait .dragon-node__portrait {
+  width: 100%;
+  height: 100%;
+}
+
+.dragon-node--lod-dot {
+  /* Keep a near-constant screen size while the board is zoomed out. */
+  gap: 0;
+  width: 0.8rem;
+  height: 0.8rem;
+  padding: 0;
+  border: none;
+  border-radius: 2px;
+  /* Opaque shell covers edge stroke under the swatch. */
+  background: var(--paper);
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.dragon-node--lod-dot .dragon-node__portrait {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  overflow: visible;
+}
+
+.dragon-node__dot {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--ink) 42%, var(--paper));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ink) 18%, transparent);
+}
+
+.dragon-node--lod-dot.dragon-node--sex-unknown .dragon-node__dot {
+  filter: saturate(0.35);
+}
+
+.dragon-node--lod-dot.dragon-node--selected {
+  width: 1.15rem;
+  height: 1.15rem;
+  background: transparent;
+  z-index: 3;
+}
+
+.dragon-node--lod-dot.dragon-node--selected .dragon-node__dot {
+  border-radius: 3px;
+  box-shadow:
+    0 0 0 2px var(--paper-lift),
+    0 0 0 4px var(--accent),
+    0 0 10px color-mix(in srgb, var(--accent) 55%, transparent);
 }
 
 .dragon-node:hover {
@@ -28,6 +144,43 @@
 
 .dragon-node--focused {
   box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+/* Dim without alpha on the shell - edges must not show through cards/dots. */
+.dragon-node--dimmed .dragon-node__portrait,
+.dragon-node--dimmed .dragon-node__name,
+.dragon-node--dimmed .dragon-node__relation,
+.dragon-node--dimmed .dragon-node__pronouns,
+.dragon-node--dimmed .dragon-node__birth,
+.dragon-node--dimmed .dragon-node__g1,
+.dragon-node--dimmed .dragon-node__exalted {
+  opacity: 0.34;
+}
+
+.dragon-node--dimmed .dragon-node__dot {
+  filter: saturate(0.45) brightness(1.25);
+}
+
+.dragon-node--dimmed:hover .dragon-node__portrait,
+.dragon-node--dimmed:hover .dragon-node__name,
+.dragon-node--dimmed:hover .dragon-node__relation,
+.dragon-node--dimmed:hover .dragon-node__pronouns,
+.dragon-node--dimmed:hover .dragon-node__birth,
+.dragon-node--dimmed:hover .dragon-node__g1,
+.dragon-node--dimmed:hover .dragon-node__exalted,
+.dragon-node--dimmed.dragon-node--selected .dragon-node__portrait,
+.dragon-node--dimmed.dragon-node--selected .dragon-node__name,
+.dragon-node--dimmed.dragon-node--selected .dragon-node__relation,
+.dragon-node--dimmed.dragon-node--selected .dragon-node__pronouns,
+.dragon-node--dimmed.dragon-node--selected .dragon-node__birth,
+.dragon-node--dimmed.dragon-node--selected .dragon-node__g1,
+.dragon-node--dimmed.dragon-node--selected .dragon-node__exalted {
+  opacity: 1;
+}
+
+.dragon-node--dimmed:hover .dragon-node__dot,
+.dragon-node--dimmed.dragon-node--selected .dragon-node__dot {
+  filter: none;
 }
 
 .dragon-node__portrait {
@@ -50,6 +203,57 @@
 .dragon-node--sex-unknown .dragon-node__portrait img,
 .dragon-node--sex-unknown .dragon-node__placeholder {
   filter: grayscale(1);
+}
+
+.dragon-node__g1 {
+  position: absolute;
+  top: calc(0.15rem * var(--tree-zoom, 1));
+  left: calc(0.15rem * var(--tree-zoom, 1));
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  min-width: calc(1.35rem * var(--tree-zoom, 1));
+  height: calc(1.05rem * var(--tree-zoom, 1));
+  padding: 0 calc(0.2rem * var(--tree-zoom, 1));
+  border-radius: calc(0.2rem * var(--tree-zoom, 1));
+  background: color-mix(in srgb, var(--ink) 78%, #2f6fed);
+  color: #fff;
+  font-size: calc(0.58rem * var(--tree-zoom, 1));
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.dragon-node--lod-portrait .dragon-node__g1 {
+  min-width: calc(1.15rem * var(--tree-zoom, 1));
+  height: calc(0.9rem * var(--tree-zoom, 1));
+  font-size: calc(0.5rem * var(--tree-zoom, 1));
+}
+
+.dragon-node__exalted {
+  position: absolute;
+  bottom: calc(0.15rem * var(--tree-zoom, 1));
+  left: calc(0.15rem * var(--tree-zoom, 1));
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  min-width: calc(1.35rem * var(--tree-zoom, 1));
+  height: calc(1.05rem * var(--tree-zoom, 1));
+  padding: 0 calc(0.2rem * var(--tree-zoom, 1));
+  border-radius: calc(0.2rem * var(--tree-zoom, 1));
+  background: color-mix(in srgb, var(--ink) 72%, #6b4f8a);
+  color: #fff;
+  font-size: calc(0.58rem * var(--tree-zoom, 1));
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.dragon-node--lod-portrait .dragon-node__exalted {
+  min-width: calc(1.15rem * var(--tree-zoom, 1));
+  height: calc(0.9rem * var(--tree-zoom, 1));
+  font-size: calc(0.5rem * var(--tree-zoom, 1));
 }
 
 .dragon-node__sex-error {
@@ -92,6 +296,28 @@
   font-size: calc(0.75rem * var(--tree-zoom, 1));
   font-weight: 600;
   line-height: 1.25;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dragon-node__pronouns {
+  font-size: calc(0.6rem * var(--tree-zoom, 1));
+  font-weight: 400;
+  line-height: 1.2;
+  color: var(--ink-soft);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dragon-node__birth {
+  font-size: calc(0.58rem * var(--tree-zoom, 1));
+  font-weight: 400;
+  line-height: 1.2;
+  color: var(--ink-soft);
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;

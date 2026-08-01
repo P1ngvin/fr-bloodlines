@@ -65,6 +65,7 @@ export function buildFocusTree(
       childrenIndex,
       local,
       addEdge,
+      project,
     )
 
     let minX = Infinity
@@ -155,7 +156,7 @@ function buildFocusSiblingEdges(
     const a = project.dragons[aId]
     const b = project.dragons[bId]
     if (!a || !b) continue
-    // Full siblings share the lineage fork; half-siblings / group-only get a bar.
+    // Full siblings share the lineage fork; explicit sibling-group only get a bar.
     if (shareBothParents(a, b)) continue
     edges.push({ aId, bId })
   }

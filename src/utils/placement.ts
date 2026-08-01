@@ -1,9 +1,10 @@
 /** Matches .dragon-node box and TreeCanvas packing at --tree-zoom: 1. */
 export const FREE_NODE_W = 100
-export const FREE_NODE_H = 132
+export const FREE_NODE_H = 156
 
 export const LAYOUT_CELL_W = 112
-export const LAYOUT_GEN_GAP = 40
+/** Vertical clearance between generation rows (edge routing lives here). */
+export const LAYOUT_GEN_GAP = 56
 export const LAYOUT_CELL_H = FREE_NODE_H + LAYOUT_GEN_GAP
 export const LAYOUT_PAD_X = 48
 export const LAYOUT_PAD_Y = 48
@@ -28,10 +29,13 @@ function overlaps(a: Rect, b: Rect, pad = 12): boolean {
 export function packedNodeTopLeft(
   node: PackedNode,
   minGeneration: number,
+  options?: { y?: number },
 ): { x: number; y: number } {
   return {
     x: LAYOUT_PAD_X + node.x * LAYOUT_CELL_W + LAYOUT_CELL_W / 2 - FREE_NODE_W / 2,
-    y: LAYOUT_PAD_Y + (node.generation - minGeneration) * LAYOUT_CELL_H,
+    y:
+      options?.y ??
+      LAYOUT_PAD_Y + (node.generation - minGeneration) * LAYOUT_CELL_H,
   }
 }
 

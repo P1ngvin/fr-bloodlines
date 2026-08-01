@@ -39,6 +39,7 @@ import {
   FrDragonPageParseError,
   mergeFrDragonPage,
   parseFrDragonPage,
+  parseFrDragonPasteText,
 } from '../../importers/frDragonPage'
 import {
   downloadProjectJson,
@@ -47,6 +48,7 @@ import {
   pickProjectJsonFile,
 } from '../../storage/fileIo'
 import { TopBar, type MenuAction } from '../chrome/TopBar'
+import { PasteImportDialog } from '../dialogs/PasteImportDialog'
 import { SettingsDialog } from '../dialogs/SettingsDialog'
 import { WelcomeScreen } from '../dialogs/WelcomeScreen'
 import { EditPanel } from '../panels/EditPanel'
@@ -64,6 +66,14 @@ function askProjectName(defaultName: string): string | null {
   return trimmed.length > 0 ? trimmed : defaultName
 }
 
+function formatImportErrors(errors: string[]): string {
+  const limit = 8
+  const head = errors.slice(0, limit)
+  const more =
+    errors.length > limit ? `\n…and ${errors.length - limit} more.` : ''
+  return head.join('\n') + more
+}
+
 export function Workspace() {
   const project = useProject()
   const selectedDragonId = useSelectedDragonId()
@@ -71,6 +81,8 @@ export function Workspace() {
   const viewSettings = useViewSettings()
   const [menuOpen, setMenuOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [pasteImportOpen, setPasteImportOpen] = useState(false)
+  const [pasteImportError, setPasteImportError] = useState<string | null>(null)
   const [booting, setBooting] = useState(true)
   const [hasSession, setHasSession] = useState(false)
   const [welcomeError, setWelcomeError] = useState<string | null>(null)
@@ -255,11 +267,43 @@ export function Workspace() {
     if (imported > 0) {
       replaceProject(project)
       if (lastMainId) selectDragon(lastMainId, getProject())
-      if (errors.length > 0) {
-        showError(`Imported ${imported} page(s). Some files failed:\n${errors[0]}`)
+    }
+
+    const failed = errors.length
+    if (imported === 0 && failed > 0) {
+      showError(formatImportErrors(errors))
+      return
+    }
+    if (failed > 0) {
+      showError(
+        `Imported ${imported} of ${files.length} page${files.length === 1 ? '' : 's'}.\n\n` +
+          formatImportErrors(errors),
+      )
+      return
+    }
+    if (imported > 1) {
+      window.alert(`Imported ${imported} pages.`)
+    }
+  }
+
+  function handlePasteImportDragon(text: string) {
+    setPasteImportError(null)
+    try {
+      const page = parseFrDragonPasteText(text)
+      const merged = mergeFrDragonPage(getProject(), page)
+      if (!merged.ok) {
+        setPasteImportError(merged.error)
+        return
       }
-    } else if (errors.length > 0) {
-      showError(errors[0]!)
+      replaceProject(merged.project)
+      selectDragon(merged.summary.mainId, getProject())
+      setPasteImportOpen(false)
+    } catch (error) {
+      const message =
+        error instanceof FrDragonPageParseError
+          ? error.message
+          : 'Could not parse that text.'
+      setPasteImportError(message)
     }
   }
 
@@ -281,9 +325,11 @@ export function Workspace() {
         )
         if (!ok) return
       }
-      const name = askProjectName('Untitled')
-      if (name === null) return
-      startNewProject(name)
+      // Same start screen as a fresh visit - name/create or open JSON.
+      newProject('Untitled')
+      clearSelection()
+      setWelcomeError(null)
+      setHasSession(false)
       return
     }
 
@@ -362,6 +408,12 @@ export function Workspace() {
           onImportDragonPage={() => {
             void handleImportDragonPages()
           }}
+          onPasteImportDragon={() => {
+            setMenuOpen(false)
+            setCanvasMenu(null)
+            setPasteImportError(null)
+            setPasteImportOpen(true)
+          }}
         />
       </div>
 
@@ -370,6 +422,16 @@ export function Workspace() {
         settings={viewSettings}
         onChange={setViewSettings}
         onClose={() => setSettingsOpen(false)}
+      />
+
+      <PasteImportDialog
+        open={pasteImportOpen}
+        error={pasteImportError}
+        onClose={() => {
+          setPasteImportOpen(false)
+          setPasteImportError(null)
+        }}
+        onImport={handlePasteImportDragon}
       />
     </div>
   )

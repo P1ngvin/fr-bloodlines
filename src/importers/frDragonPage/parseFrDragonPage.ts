@@ -1,3 +1,8 @@
+import {
+  parseElementFromEyeTypeText,
+  parseFrHatchday,
+  type DragonElement,
+} from '../../data/models'
 import type { FrDragonPage, FrDragonRef } from './types'
 
 export class FrDragonPageParseError extends Error {
@@ -24,22 +29,104 @@ export function parseFrDragonPage(text: string): FrDragonPage {
 
   const name = readName(doc) || `Dragon ${frId}`
   const sex = readSex(doc)
+  const birthDate = readBirthDate(doc)
+  const exalted = isExaltedDragonPage(doc, text)
+  const element = readElement(doc, text)
   // Living profile vs exalted memorial page use different markup.
-  const parents =
-    readDragonLinks(doc, 'ul.dragon-profile-lineage-parents') ||
-    readExaltedLineageSection(doc, 'Parents')
+  const parents = readParents(doc)
   const offspring =
-    readDragonLinks(doc, 'ul.dragon-profile-lineage-offspring') ||
+    readDragonLinks(doc, 'ul.dragon-profile-lineage-offspring') ??
     readExaltedLineageSection(doc, 'Offspring')
 
   return {
     frId,
     name,
     sex,
-    father: parents[0] ?? null,
-    mother: parents[1] ?? null,
+    birthDate,
+    father: parents.father,
+    mother: parents.mother,
+    parentsNone: parents.parentsNone,
+    exalted,
+    element,
     offspring,
   }
+}
+
+/** Memorial / exalted-to-deity pages use distinct markup and copy. */
+function isExaltedDragonPage(doc: Document, rawText: string): boolean {
+  if (doc.querySelector('.exalted-content, img.exalted-image, .exalted-lineage')) {
+    return true
+  }
+  if (doc.querySelector('h2.exalted-lineage-header')) return true
+  return /was exalted to the ranks/i.test(rawText)
+}
+
+type ParentsParse = {
+  father: FrDragonRef | null
+  mother: FrDragonRef | null
+  parentsNone: boolean
+}
+
+function readParents(doc: Document): ParentsParse {
+  const living = doc.querySelector('ul.dragon-profile-lineage-parents')
+  if (living) {
+    const refs = collectDragonLinks(living)
+    if (refs.length > 0) {
+      return {
+        father: refs[0] ?? null,
+        mother: refs[1] ?? null,
+        parentsNone: false,
+      }
+    }
+    if (listLooksLikeNone(living)) {
+      return { father: null, mother: null, parentsNone: true }
+    }
+  }
+
+  const exalted = readExaltedParents(doc)
+  if (exalted) return exalted
+
+  return { father: null, mother: null, parentsNone: false }
+}
+
+function readExaltedParents(doc: Document): ParentsParse | null {
+  const want = 'parents'
+  for (const header of doc.querySelectorAll('h2.exalted-lineage-header')) {
+    if (normalizeName(header.textContent ?? '').toLowerCase() !== want) {
+      continue
+    }
+    let sibling: Element | null = header.nextElementSibling
+    while (sibling && sibling.tagName !== 'UL') {
+      sibling = sibling.nextElementSibling
+    }
+    if (!sibling) {
+      return { father: null, mother: null, parentsNone: false }
+    }
+    const refs = collectDragonLinks(sibling)
+    if (refs.length > 0) {
+      return {
+        father: refs[0] ?? null,
+        mother: refs[1] ?? null,
+        parentsNone: false,
+      }
+    }
+    if (listLooksLikeNone(sibling)) {
+      return { father: null, mother: null, parentsNone: true }
+    }
+    return { father: null, mother: null, parentsNone: false }
+  }
+  return null
+}
+
+/** FR writes a bare "none" list item for true G1 dragons. */
+function listLooksLikeNone(list: Element): boolean {
+  const items = [...list.querySelectorAll(':scope > li')]
+  if (items.length === 1) {
+    const text = normalizeName(items[0]!.textContent ?? '').toLowerCase()
+    if (text === 'none') return true
+  }
+  const whole = normalizeName(list.textContent ?? '').toLowerCase()
+  return whole === 'none'
 }
 
 function extractHtmlDocument(text: string): string | null {
@@ -172,6 +259,73 @@ function readName(doc: Document): string {
   return normalizeName(crumb?.textContent ?? '')
 }
 
+/** Eye Type block → flight element (Ice, Fire, …). */
+function readElement(doc: Document, rawText: string): DragonElement {
+  for (const header of doc.querySelectorAll(
+    'h3.dragon-profile-details-subheader',
+  )) {
+    if (normalizeName(header.textContent ?? '').toLowerCase() !== 'eye type') {
+      continue
+    }
+    let sibling: Element | null = header.nextElementSibling
+    while (sibling && !sibling.classList.contains('dragon-profile-stats')) {
+      sibling = sibling.nextElementSibling
+    }
+    const fromBlock = parseElementFromEyeTypeText(sibling?.textContent ?? '')
+    if (fromBlock) return fromBlock
+    const fromHeader = parseElementFromEyeTypeText(
+      `${header.textContent ?? ''} ${sibling?.textContent ?? ''}`,
+    )
+    if (fromHeader) return fromHeader
+  }
+
+  const eyeImg = doc.querySelector(
+    'img[alt*="Eye Type"], img[src*="/eyes/"], img[src*="eye_type"]',
+  )
+  if (eyeImg) {
+    const fromAlt = parseElementFromEyeTypeText(
+      `${eyeImg.getAttribute('alt') ?? ''} ${eyeImg.getAttribute('src') ?? ''}`,
+    )
+    if (fromAlt) return fromAlt
+    const wrap = eyeImg.closest(
+      '.dragon-profile-stat-icon, .dragon-profile-stats, li, div',
+    )
+    const fromWrap = parseElementFromEyeTypeText(wrap?.textContent ?? '')
+    if (fromWrap) return fromWrap
+  }
+
+  return parseElementFromEyeTypeText(rawText)
+}
+
+/** FR Hatchday block: h3 "Hatchday" then strong date like "Sep 08, 2025". */
+function readBirthDate(doc: Document): string {
+  for (const header of doc.querySelectorAll(
+    'h3.dragon-profile-details-subheader',
+  )) {
+    if (normalizeName(header.textContent ?? '').toLowerCase() !== 'hatchday') {
+      continue
+    }
+    let sibling: Element | null = header.nextElementSibling
+    while (sibling && !sibling.classList.contains('dragon-profile-stats')) {
+      sibling = sibling.nextElementSibling
+    }
+    const strong = sibling?.querySelector(
+      '.dragon-profile-stat-icon-value strong',
+    )
+    const parsed = parseFrHatchday(strong?.textContent ?? '')
+    if (parsed) return parsed
+  }
+
+  // Fallback: birthday-cake icon next to the hatchday value.
+  const cake = doc.querySelector(
+    'img[alt="Hatchday"], img[src*="birthday-cake.png"]',
+  )
+  const value = cake
+    ?.closest('.dragon-profile-stat-icon')
+    ?.querySelector('.dragon-profile-stat-icon-value strong')
+  return parseFrHatchday(value?.textContent ?? '')
+}
+
 function readSex(doc: Document): FrDragonPage['sex'] {
   // Check "female" before "male" - "female" contains the substring "male".
   const tooltip = (
@@ -199,15 +353,13 @@ function readSex(doc: Document): FrDragonPage['sex'] {
   return 'unknown'
 }
 
-/** Empty array is falsy for `||` fallback via nullish helper below. */
 function readDragonLinks(
   doc: Document,
   selector: string,
 ): FrDragonRef[] | null {
   const list = doc.querySelector(selector)
   if (!list) return null
-  const refs = collectDragonLinks(list)
-  return refs.length > 0 ? refs : null
+  return collectDragonLinks(list)
 }
 
 /** Exalted pages: heading "Parents" / "Offspring" then `ul.exalted-lineage-list`. */

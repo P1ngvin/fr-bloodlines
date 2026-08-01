@@ -36,7 +36,8 @@ export function pickProjectJsonFile(): Promise<File | null> {
 }
 
 /**
- * Pick one or more downloaded Flight Rising dragon pages (.mhtml / .html).
+ * Pick downloaded Flight Rising dragon pages (.mhtml / .html).
+ * Multi-select is on - choose a whole folder selection / Ctrl+click batch.
  * Resolves an empty array if the user cancels.
  */
 export function pickFrDragonPageFiles(): Promise<File[]> {

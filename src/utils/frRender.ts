@@ -27,8 +27,9 @@ export function getDragonPageUrl(frId: string): string {
 }
 
 /**
- * FR stores renders in numbered folders:
- * folder = ceil(dragonId / 100)
+ * FR stores renders in numbered folders of 100 ids:
+ * folder = floor(dragonId / 100) + 1
+ * (IDs 1-99 → 1, 100-199 → 2, …; multiples of 100 go in the next folder.)
  *
  * Full:     .../rendern/350/223899/22389889_350.png
  * Portrait: .../rendern/portraits/505122/50512147p.png
@@ -36,7 +37,7 @@ export function getDragonPageUrl(frId: string): string {
 export function getFrRenderFolder(frId: string): string {
   const id = Number(normalizeFrId(frId))
   if (!Number.isFinite(id) || id <= 0) return ''
-  return String(Math.ceil(id / 100))
+  return String(Math.floor(id / 100) + 1)
 }
 
 export function getDragonRenderUrl(

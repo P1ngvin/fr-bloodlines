@@ -54,6 +54,10 @@ function persist() {
     ancestorGenerations: view.ancestorGenerations,
     descendantGenerations: view.descendantGenerations,
     treeZoom: view.treeZoom,
+    treeViewMode: view.treeViewMode,
+    highlightKin: view.highlightKin,
+    dateFormat: view.dateFormat,
+    hideExalted: view.hideExalted,
   })
 }
 

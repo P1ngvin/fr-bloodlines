@@ -1,4 +1,5 @@
 export { parseFrDragonPage, FrDragonPageParseError } from './parseFrDragonPage'
+export { parseFrDragonPasteText } from './parseFrDragonPasteText'
 export { mergeFrDragonPage } from './mergeFrDragonPage'
 export type { FrDragonPageMergeResult } from './mergeFrDragonPage'
 export type {

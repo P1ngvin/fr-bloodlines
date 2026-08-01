@@ -16,6 +16,28 @@
   color: var(--ink-soft);
 }
 
+.edit-form__check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.edit-form__check input {
+  margin: 0.15rem 0 0;
+  flex: 0 0 auto;
+}
+
+.edit-form__check:has(input:disabled) {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .edit-form__field input,
 .edit-form__field select,
 .edit-form__field textarea {

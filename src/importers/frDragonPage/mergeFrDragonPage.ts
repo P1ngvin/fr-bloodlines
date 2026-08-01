@@ -24,6 +24,9 @@ export function mergeFrDragonPage(
     name: page.name,
     sex: page.sex,
     forceSex: page.sex !== 'unknown',
+    birthDate: page.birthDate,
+    exalted: page.exalted,
+    element: page.element,
   })
   next = main.project
   created += main.created
@@ -31,36 +34,48 @@ export function mergeFrDragonPage(
   const mainId = main.dragonId
 
   let parentsLinked = 0
-  if (page.father) {
-    const father = upsertDragon(next, {
-      frId: page.father.frId,
-      name: page.father.name,
-      sex: 'male',
-      forceSex: true,
-    })
-    next = father.project
-    created += father.created
-    updated += father.updated
-    const linked = setFather(next, mainId, father.dragonId)
-    if (!linked.ok) return linked
-    next = linked.project
-    parentsLinked += 1
-  }
+  if (page.parentsNone) {
+    const cleared = markParentsNone(next, mainId)
+    next = cleared.project
+    updated += cleared.updated
+  } else {
+    if (page.father) {
+      const father = upsertDragon(next, {
+        frId: page.father.frId,
+        name: page.father.name,
+        sex: 'male',
+        forceSex: true,
+      })
+      next = father.project
+      created += father.created
+      updated += father.updated
+      const linked = setFather(next, mainId, father.dragonId)
+      if (!linked.ok) return linked
+      next = linked.project
+      parentsLinked += 1
+    }
 
-  if (page.mother) {
-    const mother = upsertDragon(next, {
-      frId: page.mother.frId,
-      name: page.mother.name,
-      sex: 'female',
-      forceSex: true,
-    })
-    next = mother.project
-    created += mother.created
-    updated += mother.updated
-    const linked = setMother(next, mainId, mother.dragonId)
-    if (!linked.ok) return linked
-    next = linked.project
-    parentsLinked += 1
+    if (page.mother) {
+      const mother = upsertDragon(next, {
+        frId: page.mother.frId,
+        name: page.mother.name,
+        sex: 'female',
+        forceSex: true,
+      })
+      next = mother.project
+      created += mother.created
+      updated += mother.updated
+      const linked = setMother(next, mainId, mother.dragonId)
+      if (!linked.ok) return linked
+      next = linked.project
+      parentsLinked += 1
+    }
+
+    if (parentsLinked > 0) {
+      const clearedFlag = setParentsNoneFlag(next, mainId, false)
+      next = clearedFlag.project
+      updated += clearedFlag.updated
+    }
   }
 
   const mainDragon = next.dragons[mainId]!
@@ -123,16 +138,29 @@ function upsertDragon(
     name: string
     sex: Dragon['sex']
     forceSex: boolean
+    birthDate?: string
+    /** Only set when known from the main imported page. */
+    exalted?: boolean
+    /** Only set when known from the main imported page. */
+    element?: Dragon['element']
   },
 ): { project: Project; dragonId: string; created: number; updated: number } {
-  const existing = findByFrId(project, input.frId)
-  const name = normalizeDisplayName(input.name, `Dragon ${input.frId}`)
+  const frId = input.frId.trim()
+  const name = normalizeDisplayName(
+    input.name,
+    frId ? `Dragon ${frId}` : 'Unnamed',
+  )
+  const existing = findExisting(project, frId, name)
+  const birthDate = input.birthDate?.trim() || ''
 
   if (!existing) {
     const dragon = createDragon({
       name,
-      frId: input.frId,
+      frId,
       sex: input.sex,
+      birthDate,
+      exalted: input.exalted === true,
+      element: input.element ?? '',
     })
     return {
       project: {
@@ -153,8 +181,9 @@ function upsertDragon(
     changed = true
   }
 
-  if (existing.frId !== input.frId) {
-    next = { ...next, frId: input.frId }
+  // Paste kin often lack frIds - never wipe a known id with an empty one.
+  if (frId && existing.frId !== frId) {
+    next = { ...next, frId }
     changed = true
   }
 
@@ -167,6 +196,27 @@ function upsertDragon(
     changed = true
   } else if (existing.sex === 'unknown' && input.sex !== 'unknown') {
     next = { ...next, sex: input.sex }
+    changed = true
+  }
+
+  if (birthDate && birthDate !== existing.birthDate) {
+    next = { ...next, birthDate }
+    changed = true
+  }
+
+  // Only the main profile import knows exalted status; kin stubs leave it alone.
+  if (input.exalted !== undefined && existing.exalted !== input.exalted) {
+    next = { ...next, exalted: input.exalted }
+    changed = true
+  }
+
+  // Same for element (from Eye Type on the main profile).
+  if (
+    input.element !== undefined &&
+    input.element !== '' &&
+    existing.element !== input.element
+  ) {
+    next = { ...next, element: input.element }
     changed = true
   }
 
@@ -195,4 +245,84 @@ function findByFrId(project: Project, frId: string): Dragon | undefined {
     if (dragon.frId === frId) return dragon
   }
   return undefined
+}
+
+/**
+ * Prefer frId. When paste import has names only, reuse a unique same-name
+ * dragon (or a single empty-frId stub when attaching a real frId).
+ * Never match "Unnamed" by name alone.
+ */
+function findExisting(
+  project: Project,
+  frId: string,
+  name: string,
+): Dragon | undefined {
+  if (frId) {
+    const byId = findByFrId(project, frId)
+    if (byId) return byId
+  }
+
+  if (!name || name === 'Unnamed') return undefined
+
+  const matches = Object.values(project.dragons).filter((d) => d.name === name)
+  if (matches.length === 0) return undefined
+  if (matches.length === 1) return matches[0]
+
+  if (frId) {
+    const stubs = matches.filter((d) => !d.frId)
+    if (stubs.length === 1) return stubs[0]
+  }
+  return undefined
+}
+
+/** FR confirmed Parents: None - clear links and set the G1 flag. */
+function markParentsNone(
+  project: Project,
+  dragonId: string,
+): { project: Project; updated: number } {
+  const dragon = project.dragons[dragonId]
+  if (!dragon) return { project, updated: 0 }
+  if (
+    dragon.parentsNone &&
+    dragon.motherId === null &&
+    dragon.fatherId === null
+  ) {
+    return { project, updated: 0 }
+  }
+  return {
+    project: {
+      ...project,
+      dragons: {
+        ...project.dragons,
+        [dragonId]: {
+          ...dragon,
+          motherId: null,
+          fatherId: null,
+          parentsNone: true,
+        },
+      },
+    },
+    updated: 1,
+  }
+}
+
+function setParentsNoneFlag(
+  project: Project,
+  dragonId: string,
+  parentsNone: boolean,
+): { project: Project; updated: number } {
+  const dragon = project.dragons[dragonId]
+  if (!dragon || dragon.parentsNone === parentsNone) {
+    return { project, updated: 0 }
+  }
+  return {
+    project: {
+      ...project,
+      dragons: {
+        ...project.dragons,
+        [dragonId]: { ...dragon, parentsNone },
+      },
+    },
+    updated: 1,
+  }
 }

@@ -35,7 +35,11 @@ export type { FocusTreeOptions } from './buildFocusTree'
 export { buildStableTree, isUnlinkedIsolate } from './buildStableTree'
 export type { StableTreeOptions } from './buildStableTree'
 
-export { kinshipLabel } from './kinshipLabel'
+export { kinshipInfo, kinshipLabel } from './kinshipLabel'
+export type { KinshipInfo } from './kinshipLabel'
+export { collectLocalRelativeIds } from './localRelatives'
+export { filterAndCompactLayout } from './filterTreeLayout'
+export { isGenerationOne } from './generationOne'
 
 export type {
   TreeLayout,

@@ -1,6 +1,21 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
-import type { Dragon, DragonSex, ImageCropMode, Project } from '../../data/models'
-import { DRAGON_SEXES, IMAGE_CROP_MODES } from '../../data/models'
+import type {
+  Dragon,
+  DragonElement,
+  DragonSex,
+  ImageCropMode,
+  Project,
+} from '../../data/models'
+import {
+  DRAGON_SEXES,
+  FR_ELEMENTS,
+  IMAGE_CROP_MODES,
+  PRONOUN_PRESETS,
+  displayElement,
+  isPronounPreset,
+  normalizePronouns,
+} from '../../data/models'
+import { isGenerationOne } from '../../tree'
 import { searchDragons } from '../../utils/dragonSearch'
 import { getDragonPageUrl } from '../../utils/frRender'
 import { normalizeDisplayName } from '../../utils/text'
@@ -25,6 +40,7 @@ export function EditPanel({
   const searchId = useId()
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
+  const [pronounsOther, setPronounsOther] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
 
   const matches = useMemo(
@@ -40,6 +56,16 @@ export function EditPanel({
     return () => document.removeEventListener('pointerdown', onPointerDown)
   }, [])
 
+  useEffect(() => {
+    if (!selected) {
+      setPronounsOther(false)
+      return
+    }
+    setPronounsOther(
+      selected.pronouns !== '' && !isPronounPreset(selected.pronouns),
+    )
+  }, [selected?.id])
+
   function pick(dragon: Dragon) {
     onSelectDragon(dragon.id)
     setQuery('')
@@ -47,6 +73,14 @@ export function EditPanel({
   }
 
   const pageUrl = selected ? getDragonPageUrl(selected.frId) : ''
+  const pronounSelect = pronounsOther
+    ? 'other'
+    : selected &&
+        (selected.pronouns === '' || isPronounPreset(selected.pronouns))
+      ? selected.pronouns
+      : selected
+        ? 'other'
+        : ''
 
   return (
     <aside className="side-panel" aria-label="Dragon editor">
@@ -116,7 +150,25 @@ export function EditPanel({
       ) : (
         <>
           <p className="side-panel__kicker">Dragon</p>
-          <h2 className="side-panel__title">{selected.name || 'Unnamed'}</h2>
+          <h2 className="side-panel__title">
+            {selected.name || 'Unnamed'}
+            {isGenerationOne(selected) ? (
+              <span
+                className="side-panel__g1"
+                title="Generation 1 - no parents (None on Flight Rising)"
+              >
+                G1
+              </span>
+            ) : null}
+            {selected.exalted ? (
+              <span
+                className="side-panel__exalted"
+                title="Exalted on Flight Rising"
+              >
+                EX
+              </span>
+            ) : null}
+          </h2>
 
           <form className="edit-form" onSubmit={(event) => event.preventDefault()}>
             <label className="edit-form__field">
@@ -182,6 +234,110 @@ export function EditPanel({
                   </option>
                 ))}
               </select>
+            </label>
+
+            <label className="edit-form__field">
+              <span>Element</span>
+              <select
+                value={selected.element}
+                onChange={(event) =>
+                  onPatch({
+                    element: event.target.value as DragonElement,
+                  })
+                }
+              >
+                <option value="">Not set</option>
+                {FR_ELEMENTS.map((element) => (
+                  <option key={element} value={element}>
+                    {displayElement(element)}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="edit-form__field">
+              <span>Pronouns</span>
+              <select
+                value={pronounSelect}
+                onChange={(event) => {
+                  const value = event.target.value
+                  if (value === 'other') {
+                    setPronounsOther(true)
+                    if (isPronounPreset(selected.pronouns)) {
+                      onPatch({ pronouns: '' })
+                    }
+                    return
+                  }
+                  setPronounsOther(false)
+                  onPatch({ pronouns: value })
+                }}
+              >
+                <option value="">Not set</option>
+                {PRONOUN_PRESETS.map((set) => (
+                  <option key={set} value={set}>
+                    {set}
+                  </option>
+                ))}
+                <option value="other">Other</option>
+              </select>
+            </label>
+            {pronounSelect === 'other' ? (
+              <label className="edit-form__field">
+                <span>Custom pronouns</span>
+                <input
+                  type="text"
+                  value={selected.pronouns}
+                  placeholder="e.g. xe/xem"
+                  autoComplete="off"
+                  spellCheck={false}
+                  onChange={(event) => onPatch({ pronouns: event.target.value })}
+                  onBlur={(event) => {
+                    const next = normalizePronouns(event.target.value)
+                    if (next !== selected.pronouns) onPatch({ pronouns: next })
+                  }}
+                />
+              </label>
+            ) : null}
+
+            <label className="edit-form__field">
+              <span>Birth date</span>
+              <input
+                type="date"
+                value={selected.birthDate}
+                onChange={(event) =>
+                  onPatch({ birthDate: event.target.value })
+                }
+              />
+            </label>
+
+            <label className="edit-form__check">
+              <input
+                type="checkbox"
+                checked={selected.parentsNone}
+                disabled={
+                  selected.motherId !== null || selected.fatherId !== null
+                }
+                onChange={(event) =>
+                  onPatch({ parentsNone: event.target.checked })
+                }
+              />
+              <span>
+                G1
+                {selected.motherId !== null || selected.fatherId !== null
+                  ? ' - clear parent links first'
+                  : ''}
+              </span>
+            </label>
+
+            <label className="edit-form__check">
+              <input
+                type="checkbox"
+                checked={selected.exalted}
+                onChange={(event) =>
+                  onPatch({ exalted: event.target.checked })
+                }
+              />
+              <span>Exalted</span>
             </label>
 
             <label className="edit-form__field">

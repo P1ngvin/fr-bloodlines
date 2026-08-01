@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef } from 'react'
-import type { ViewSettings } from '../../state/viewSettingsStore'
+import type { DateFormat, ViewSettings } from '../../state/viewSettingsStore'
 import './SettingsDialog.css'
 
 type SettingsDialogProps = {
@@ -110,6 +110,30 @@ export function SettingsDialog({
           value={settings.descendantGenerations}
           onChange={(descendantGenerations) => onChange({ descendantGenerations })}
         />
+
+        <label className="settings-dialog__field">
+          <span>Date format</span>
+          <select
+            value={settings.dateFormat}
+            onChange={(event) =>
+              onChange({ dateFormat: event.target.value as DateFormat })
+            }
+          >
+            <option value="european">European (DD.MM.YYYY)</option>
+            <option value="american">American (MM/DD/YYYY)</option>
+          </select>
+        </label>
+
+        <label className="settings-dialog__check">
+          <input
+            type="checkbox"
+            checked={settings.hideExalted}
+            onChange={(event) =>
+              onChange({ hideExalted: event.target.checked })
+            }
+          />
+          <span>Hide exalted dragons</span>
+        </label>
       </div>
     </div>
   )

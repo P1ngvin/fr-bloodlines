@@ -1,6 +1,13 @@
-import type { Dragon, DragonSex, Project } from '../data/models'
+import type { DragonSex, Project } from '../data/models'
 import { buildChildrenIndex, type ChildrenIndex } from './graph'
-import { areSiblings, shareBothParents } from './relations'
+import { areSiblings } from './relations'
+
+export type KinshipInfo = {
+  /** Short label for the tree card (fits narrow nodes). */
+  card: string
+  /** Full English term for tooltips. */
+  full: string
+}
 
 /**
  * How `otherId` relates to `activeId` (English kinship term).
@@ -12,45 +19,54 @@ export function kinshipLabel(
   otherId: string,
   childrenIndex: ChildrenIndex = buildChildrenIndex(project),
 ): string | null {
+  return kinshipInfo(project, activeId, otherId, childrenIndex)?.card ?? null
+}
+
+export function kinshipInfo(
+  project: Project,
+  activeId: string,
+  otherId: string,
+  childrenIndex: ChildrenIndex = buildChildrenIndex(project),
+): KinshipInfo | null {
   if (activeId === otherId) return null
 
   const active = project.dragons[activeId]
   const other = project.dragons[otherId]
   if (!active || !other) return null
 
-  if (active.motherId === otherId) return 'Mother'
-  if (active.fatherId === otherId) return 'Father'
+  if (active.motherId === otherId) return both('Mother')
+  if (active.fatherId === otherId) return both('Father')
 
   if (other.motherId === activeId || other.fatherId === activeId) {
-    return childLabel(other.sex)
+    return both(childLabel(other.sex))
   }
 
-  if (shareAChild(activeId, otherId, childrenIndex)) return 'Mate'
+  if (shareAChild(activeId, otherId, childrenIndex)) return both('Mate')
 
-  if (areSiblings(active, other)) {
-    return shareBothParents(active, other) || sameSiblingGroup(active, other)
-      ? 'Sibling'
-      : 'Half-sibling'
-  }
+  if (areSiblings(active, other)) return both('Sibling')
 
   const up = ancestorDepth(project, activeId, otherId)
-  if (up !== null) return ancestorLabel(up, other.sex)
+  if (up !== null) return ancestorLabels(up, other.sex)
 
   const down = descendantDepth(activeId, otherId, childrenIndex)
-  if (down !== null) return descendantLabel(down, other.sex)
+  if (down !== null) return descendantLabels(down, other.sex)
 
   for (const parentId of [active.motherId, active.fatherId]) {
     if (!parentId) continue
     const parent = project.dragons[parentId]
     if (!parent) continue
-    if (areSiblings(parent, other)) return auntUncleLabel(other.sex)
+    if (areSiblings(parent, other)) {
+      return both(auntUncleLabel(other.sex))
+    }
   }
 
   for (const parentId of [other.motherId, other.fatherId]) {
     if (!parentId) continue
     const parent = project.dragons[parentId]
     if (!parent) continue
-    if (areSiblings(active, parent)) return nieceNephewLabel(other.sex)
+    if (areSiblings(active, parent)) {
+      return both(nieceNephewLabel(other.sex))
+    }
   }
 
   for (const parentId of [active.motherId, active.fatherId]) {
@@ -64,7 +80,7 @@ export function kinshipLabel(
         other.motherId === dragon.id ||
         other.fatherId === dragon.id
       ) {
-        return 'Cousin'
+        return both('Cousin')
       }
     }
   }
@@ -72,8 +88,8 @@ export function kinshipLabel(
   return null
 }
 
-function sameSiblingGroup(a: Dragon, b: Dragon): boolean {
-  return Boolean(a.siblingGroupId && a.siblingGroupId === b.siblingGroupId)
+function both(label: string): KinshipInfo {
+  return { card: label, full: label }
 }
 
 function shareAChild(
@@ -136,11 +152,11 @@ function childLabel(sex: DragonSex): string {
   return 'Child'
 }
 
-function ancestorLabel(depth: number, sex: DragonSex): string {
+function ancestorLabels(depth: number, sex: DragonSex): KinshipInfo {
   if (depth === 1) {
-    if (sex === 'female') return 'Mother'
-    if (sex === 'male') return 'Father'
-    return 'Parent'
+    if (sex === 'female') return both('Mother')
+    if (sex === 'male') return both('Father')
+    return both('Parent')
   }
   const base =
     sex === 'female'
@@ -148,18 +164,24 @@ function ancestorLabel(depth: number, sex: DragonSex): string {
       : sex === 'male'
         ? 'grandfather'
         : 'grandparent'
-  return withGreats(depth, base)
+  return {
+    card: withGreatsCompact(depth, base),
+    full: withGreatsFull(depth, base),
+  }
 }
 
-function descendantLabel(depth: number, sex: DragonSex): string {
-  if (depth === 1) return childLabel(sex)
+function descendantLabels(depth: number, sex: DragonSex): KinshipInfo {
+  if (depth === 1) return both(childLabel(sex))
   const base =
     sex === 'female'
       ? 'granddaughter'
       : sex === 'male'
         ? 'grandson'
         : 'grandchild'
-  return withGreats(depth, base)
+  return {
+    card: withGreatsCompact(depth, base),
+    full: withGreatsFull(depth, base),
+  }
 }
 
 function auntUncleLabel(sex: DragonSex): string {
@@ -175,10 +197,25 @@ function nieceNephewLabel(sex: DragonSex): string {
 }
 
 /** depth 2 → Grandmother; depth 3 → Great-grandmother; … */
-function withGreats(depth: number, base: string): string {
+function withGreatsFull(depth: number, base: string): string {
   let label = base
   for (let i = 0; i < depth - 2; i++) {
     label = `great-${label}`
   }
   return label.charAt(0).toUpperCase() + label.slice(1)
+}
+
+/**
+ * Card-sized form: Grandmother / Great-grandmother / 2×great-grandmother.
+ * Avoids "Great-great-great-…" overflow on narrow nodes.
+ */
+function withGreatsCompact(depth: number, base: string): string {
+  if (depth === 2) {
+    return base.charAt(0).toUpperCase() + base.slice(1)
+  }
+  const greats = depth - 2
+  if (greats === 1) {
+    return 'Great-' + base
+  }
+  return `${greats}×great-${base}`
 }

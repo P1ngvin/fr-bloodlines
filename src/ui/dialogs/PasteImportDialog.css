@@ -1,0 +1,145 @@
+.paste-import-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: color-mix(in srgb, var(--ink) 28%, transparent);
+}
+
+.paste-import-dialog__panel {
+  width: min(36rem, 100%);
+  padding: 1.1rem 1.15rem 1.25rem;
+  background: var(--paper-lift);
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+
+.paste-import-dialog__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.45rem;
+}
+
+.paste-import-dialog__header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.paste-import-dialog__close {
+  appearance: none;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+  padding: 0.2rem 0;
+}
+
+.paste-import-dialog__close:hover:not(:disabled) {
+  color: var(--accent-hover);
+}
+
+.paste-import-dialog__close:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.paste-import-dialog__lead {
+  margin: 0 0 1rem;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+
+.paste-import-dialog__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 0.85rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.paste-import-dialog__field textarea {
+  resize: vertical;
+  min-height: 12rem;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+  line-height: 1.4;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  padding: 0.55rem 0.6rem;
+}
+
+.paste-import-dialog__field textarea:disabled {
+  opacity: 0.55;
+}
+
+.paste-import-dialog__error {
+  margin: 0 0 0.85rem;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: var(--danger, #a33);
+  white-space: pre-wrap;
+}
+
+.paste-import-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.55rem;
+}
+
+.paste-import-dialog__primary,
+.paste-import-dialog__secondary {
+  appearance: none;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  padding: 0.45rem 0.85rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.paste-import-dialog__secondary {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+}
+
+.paste-import-dialog__secondary:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.paste-import-dialog__primary {
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--paper-lift, #fff);
+}
+
+.paste-import-dialog__primary:hover:not(:disabled) {
+  background: var(--accent-hover, var(--accent));
+  border-color: var(--accent-hover, var(--accent));
+}
+
+.paste-import-dialog__primary:disabled,
+.paste-import-dialog__secondary:disabled {
+  opacity: 0.45;
+  cursor: default;
+}

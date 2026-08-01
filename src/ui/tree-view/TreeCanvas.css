@@ -80,11 +80,168 @@
   stroke-dasharray: calc(5 * var(--tree-zoom, 1)) calc(4 * var(--tree-zoom, 1));
 }
 
-.tree-canvas__import {
+.tree-canvas__edge--lit {
+  stroke: var(--accent);
+  stroke-width: calc(2.25 * var(--tree-zoom, 1));
+  stroke-opacity: 0.92;
+}
+
+.tree-canvas__edge--dim {
+  stroke: color-mix(in srgb, var(--ink) 8%, transparent);
+  stroke-width: calc(0.9 * var(--tree-zoom, 1));
+}
+
+.tree-canvas__edge--sibling.tree-canvas__edge--lit {
+  stroke: var(--accent);
+  stroke-width: calc(2 * var(--tree-zoom, 1));
+  stroke-dasharray: calc(6 * var(--tree-zoom, 1)) calc(4 * var(--tree-zoom, 1));
+}
+
+.tree-canvas__edge--sibling.tree-canvas__edge--dim {
+  stroke: color-mix(in srgb, var(--ink) 10%, transparent);
+}
+
+.tree-canvas--lod-named .tree-canvas__edge {
+  stroke: color-mix(in srgb, var(--ink) 22%, transparent);
+  stroke-width: calc(1.05 * var(--tree-zoom, 1));
+}
+
+.tree-canvas--lod-portrait .tree-canvas__edge {
+  stroke: color-mix(in srgb, var(--ink) 18%, transparent);
+  stroke-width: calc(0.9 * var(--tree-zoom, 1));
+}
+
+.tree-canvas--lod-dot .tree-canvas__edge {
+  stroke: color-mix(in srgb, var(--ink) 14%, transparent);
+  stroke-width: 0.75;
+}
+
+.tree-canvas--lod-portrait .tree-canvas__edge--sibling,
+.tree-canvas--lod-dot .tree-canvas__edge--sibling {
+  stroke-dasharray: none;
+  stroke: color-mix(in srgb, var(--ink) 20%, transparent);
+}
+
+/* Kin highlight must win over LOD edge thinning. */
+.tree-canvas .tree-canvas__edge--lit {
+  stroke: var(--accent);
+  stroke-width: calc(2.25 * var(--tree-zoom, 1));
+  stroke-opacity: 0.92;
+}
+
+.tree-canvas .tree-canvas__edge--sibling.tree-canvas__edge--lit {
+  stroke: var(--accent);
+  stroke-width: calc(2 * var(--tree-zoom, 1));
+  stroke-dasharray: calc(6 * var(--tree-zoom, 1)) calc(4 * var(--tree-zoom, 1));
+}
+
+.tree-canvas .tree-canvas__edge--dim {
+  stroke: color-mix(in srgb, var(--ink) 8%, transparent);
+  stroke-width: calc(0.9 * var(--tree-zoom, 1));
+  stroke-opacity: 1;
+}
+
+.tree-canvas__toolbar {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 6;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.tree-canvas__view-mode {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--paper-lift) 94%, transparent);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 8%, transparent);
+}
+
+.tree-canvas__highlight-btn {
+  appearance: none;
+  margin: 0;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--paper-lift) 94%, transparent);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 8%, transparent);
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tree-canvas__highlight-btn:hover {
+  color: var(--ink);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+
+.tree-canvas__highlight-btn--active {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+  background: color-mix(in srgb, var(--accent) 12%, var(--paper-lift));
+}
+
+.tree-canvas__highlight-btn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.tree-canvas__view-mode-btn {
+  appearance: none;
+  margin: 0;
+  padding: 0.5rem 0.65rem;
+  border: none;
+  border-right: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.tree-canvas__view-mode-btn:last-child {
+  border-right: none;
+}
+
+.tree-canvas__view-mode-btn:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--paper) 55%, transparent);
+}
+
+.tree-canvas__view-mode-btn--active {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--paper-lift));
+}
+
+.tree-canvas__view-mode-btn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+  z-index: 1;
+}
+
+.tree-canvas__import-group {
   position: absolute;
   left: 0.75rem;
   bottom: 0.75rem;
   z-index: 6;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  max-width: calc(100% - 1.5rem);
+}
+
+.tree-canvas__import {
   appearance: none;
   margin: 0;
   padding: 0.5rem 0.7rem;
@@ -198,4 +355,5 @@
   inset: 0;
   pointer-events: none;
   overflow: visible;
+  z-index: 0;
 }

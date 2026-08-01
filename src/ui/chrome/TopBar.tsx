@@ -74,7 +74,7 @@ export function TopBar({
               <li role="separator" className="top-bar__menu-sep" />
               <li role="none">
                 <button type="button" role="menuitem" onClick={() => onMenuAction('new')}>
-                  New project...
+                  New project
                 </button>
               </li>
               <li role="none">

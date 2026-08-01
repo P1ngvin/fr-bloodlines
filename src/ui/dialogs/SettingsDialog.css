@@ -73,8 +73,8 @@
   gap: 0.75rem;
 }
 
-.settings-dialog__field input[type='number'] {
-  width: 5.5rem;
+.settings-dialog__field input[type='number'],
+.settings-dialog__field select {
   font: inherit;
   font-size: 0.95rem;
   font-weight: 400;
@@ -84,6 +84,14 @@
   background: var(--paper);
   border: 1px solid var(--line);
   padding: 0.45rem 0.5rem;
+}
+
+.settings-dialog__field input[type='number'] {
+  width: 5.5rem;
+}
+
+.settings-dialog__field select {
+  width: 100%;
 }
 
 .settings-dialog__field input[type='number']:disabled {
@@ -100,6 +108,10 @@
   text-transform: none;
   color: var(--ink);
   cursor: pointer;
+}
+
+.settings-dialog__panel > .settings-dialog__check {
+  margin: 0.35rem 0 0.15rem;
 }
 
 .settings-dialog__check input {

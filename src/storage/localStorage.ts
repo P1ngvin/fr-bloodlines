@@ -1,4 +1,4 @@
-import type { ProjectFile } from '../data/models'
+import type { DateFormat, ProjectFile } from '../data/models'
 import { loadProject, ProjectLoadError } from '../data/serialization/loadProject'
 import {
   serializeProjectFile,
@@ -8,12 +8,23 @@ import {
 export const LOCAL_STORAGE_KEY = 'bloodlines:current-project'
 export const UI_SESSION_KEY = 'bloodlines:ui-session'
 
+export type TreeViewMode = 'local' | 'all'
+export type { DateFormat }
+
 export type UiSession = {
   viewFocusId: string | null
   selectedDragonId: string | null
   ancestorGenerations?: number | null
   descendantGenerations?: number | null
   treeZoom?: number
+  /** Edit canvas: close family vs full bloodline map. */
+  treeViewMode?: TreeViewMode
+  /** Dim unrelated dragons and emphasize kin edges of the selection. */
+  highlightKin?: boolean
+  /** How birth dates are shown on cards and tooltips. */
+  dateFormat?: DateFormat
+  /** Hide exalted dragons on the tree canvas. */
+  hideExalted?: boolean
 }
 
 export function saveProjectToLocalStorage(file: ProjectFile): boolean {
@@ -99,6 +110,22 @@ export function loadUiSession(): UiSession | null {
       treeZoom:
         typeof record.treeZoom === 'number' && Number.isFinite(record.treeZoom)
           ? record.treeZoom
+          : undefined,
+      treeViewMode:
+        record.treeViewMode === 'local' || record.treeViewMode === 'all'
+          ? record.treeViewMode
+          : undefined,
+      highlightKin:
+        typeof record.highlightKin === 'boolean'
+          ? record.highlightKin
+          : undefined,
+      dateFormat:
+        record.dateFormat === 'european' || record.dateFormat === 'american'
+          ? record.dateFormat
+          : undefined,
+      hideExalted:
+        typeof record.hideExalted === 'boolean'
+          ? record.hideExalted
           : undefined,
     }
   } catch {

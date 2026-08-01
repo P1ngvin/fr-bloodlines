@@ -125,7 +125,12 @@ export function setMother(
 
   let dragons: Project['dragons'] = {
     ...project.dragons,
-    [childId]: { ...clearCanvasPos(child), motherId },
+    [childId]: {
+      ...clearCanvasPos(child),
+      motherId,
+      // A real mother means this is not FR Parents: None.
+      parentsNone: motherId !== null ? false : child.parentsNone,
+    },
   }
   if (motherId !== null) {
     dragons[motherId] = clearCanvasPos(dragons[motherId]!)
@@ -167,7 +172,11 @@ export function setFather(
 
   let dragons: Project['dragons'] = {
     ...project.dragons,
-    [childId]: { ...clearCanvasPos(child), fatherId },
+    [childId]: {
+      ...clearCanvasPos(child),
+      fatherId,
+      parentsNone: fatherId !== null ? false : child.parentsNone,
+    },
   }
   if (fatherId !== null) {
     dragons[fatherId] = clearCanvasPos(dragons[fatherId]!)
@@ -258,12 +267,15 @@ export function linkAsSiblings(
   }
 }
 
+/**
+ * Full siblings (same mother and father, at least one known) or an explicit
+ * sibling group. Sharing only one parent is not treated as siblinghood -
+ * those children belong to different parental pairs.
+ */
 export function areSiblings(a: Dragon, b: Dragon): boolean {
   if (a.id === b.id) return false
   if (a.siblingGroupId && a.siblingGroupId === b.siblingGroupId) return true
-  if (a.motherId && a.motherId === b.motherId) return true
-  if (a.fatherId && a.fatherId === b.fatherId) return true
-  return false
+  return shareBothParents(a, b)
 }
 
 export function shareAParent(a: Dragon, b: Dragon): boolean {
@@ -273,11 +285,11 @@ export function shareAParent(a: Dragon, b: Dragon): boolean {
 }
 
 /**
- * Full siblings: each parent slot matches on both dragons.
- * Same id matches; both missing also matches. One set and one missing
- * (or different ids) means half-siblings.
+ * Same mother and father slots, with at least one parent known.
+ * Both-null matches are excluded (unrelated isolates are not siblings).
  */
 export function shareBothParents(a: Dragon, b: Dragon): boolean {
+  if (a.motherId === null && a.fatherId === null) return false
   return a.motherId === b.motherId && a.fatherId === b.fatherId
 }
 

@@ -42,19 +42,31 @@ Format changes require a migration under `data/migrations/`. Saves always use th
 
 Users enter a Flight Rising **dragon ID**. The app builds a render URL from `imageCrop`:
 
-- **Full:** `https://www1.flightrising.com/rendern/350/{ceil(id/100)}/{id}_350.png`
-- **Portrait:** `https://www1.flightrising.com/rendern/portraits/{ceil(id/100)}/{id}p.png`
+- **Full:** `https://www1.flightrising.com/rendern/350/{floor(id/100)+1}/{id}_350.png`
+- **Portrait:** `https://www1.flightrising.com/rendern/portraits/{floor(id/100)+1}/{id}p.png`
 
 Examples: `22389889` → `.../rendern/350/223899/22389889_350.png`;  
 `50512147` → `.../rendern/portraits/505122/50512147p.png`
 
 The app never scrapes FR pages. Exporters do not process images.
 
+## Generation 1 (G1)
+
+`parentsNone` is true only when Flight Rising lists **Parents: None**
+(confirmed G1), usually via page import. Empty mother/father slots in the
+project mean “not entered yet”, not G1.
+
 ## Focus tree
 
 **Edit mode** uses a stable bloodline layout: progenitors at the top, children
-below. Selecting another dragon only changes the highlight — the tree shape stays
-the same.
+below. Two canvas scopes:
+
+- **Relatives (local)** — parents, children, full siblings (or sibling group), and mates
+  of the selected dragon (compacted from the stable layout).
+- **All** — the full bloodline map.
+
+Zoom drives level-of-detail (full → named → portrait → dot) so far-out map
+views drop names, kinship captions, sex warnings, and image loads.
 
 **Export mode** uses a Sims-like focus tree around the chosen dragon (ancestors
 above, descendants below), with optional generation limits from Settings.

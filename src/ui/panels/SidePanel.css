@@ -17,12 +17,39 @@
 }
 
 .side-panel__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
   margin: 0 0 0.65rem;
   font-size: 1.15rem;
   font-weight: 600;
   letter-spacing: -0.02em;
   line-height: 1.2;
   color: var(--ink);
+}
+
+.side-panel__g1,
+.side-panel__exalted {
+  display: inline-grid;
+  place-items: center;
+  margin-left: 0.4rem;
+  padding: 0.12rem 0.35rem;
+  border-radius: 0.25rem;
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  line-height: 1.2;
+  vertical-align: middle;
+}
+
+.side-panel__g1 {
+  background: color-mix(in srgb, var(--ink) 78%, #2f6fed);
+}
+
+.side-panel__exalted {
+  background: color-mix(in srgb, var(--ink) 72%, #6b4f8a);
 }
 
 .side-panel__body {
