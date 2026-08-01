@@ -1424,12 +1424,25 @@ function segmentRowBlocks(
       const soloSeg = group.find(
         (seg) => parentsOfKey(seg.coupleKey).length === 1,
       )
-      const anchor =
-        (coupleSeg ? coupleMid(coupleSeg.coupleKey) : null) ??
-        (soloSeg
-          ? (placed.get(parentsOfKey(soloSeg.coupleKey)[0]!)?.x ?? null)
-          : null) ??
+      let anchor =
         group.reduce((sum, seg) => sum + seg.sortKey, 0) / group.length
+      if (coupleSeg) {
+        const mid = coupleMid(coupleSeg.coupleKey)
+        if (mid !== null) {
+          anchor = mid
+        } else {
+          const xs = parentsOfKey(coupleSeg.coupleKey)
+            .map((id) => placed.get(id)?.x)
+            .filter((x): x is number => x !== undefined)
+          if (xs.length > 0) {
+            anchor = xs.reduce((sum, x) => sum + x, 0) / xs.length
+          }
+        }
+      } else if (soloSeg) {
+        const parentId = parentsOfKey(soloSeg.coupleKey)[0]
+        const parentX = parentId ? placed.get(parentId)?.x : undefined
+        if (parentX !== undefined) anchor = parentX
+      }
       const slotCounts = group.map((seg) =>
         seg.members.reduce((sum, block) => sum + block.ids.length, 0),
       )
@@ -1712,7 +1725,7 @@ function hasOneParentCoBroodOnGeneration(
   const dragon = project.dragons[dragonId]
   if (!dragon) return false
   const parents = [dragon.motherId, dragon.fatherId].filter(
-    (id): id is string => Boolean(id) && id in project.dragons,
+    (id): id is string => id != null && id in project.dragons,
   )
   if (parents.length === 0) return false
 
@@ -1721,7 +1734,7 @@ function hasOneParentCoBroodOnGeneration(
     const other = project.dragons[otherId]
     if (!other) continue
     const otherParents = [other.motherId, other.fatherId].filter(
-      (id): id is string => Boolean(id) && id in project.dragons,
+      (id): id is string => id != null && id in project.dragons,
     )
     const shared = parents.filter((id) => otherParents.includes(id))
     if (shared.length !== 1) continue
