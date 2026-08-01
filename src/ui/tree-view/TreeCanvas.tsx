@@ -66,6 +66,8 @@ type TreeCanvasProps = {
   onOpenMenu: (menu: CanvasMenuState) => void
   onCloseMenu: () => void
   onMenuAction: (actionId: string, target: CanvasContextTarget) => void
+  /** Edit mode: import a downloaded FR dragon page. */
+  onImportDragonPage?: () => void
 }
 
 const CELL_W = LAYOUT_CELL_W
@@ -348,7 +350,8 @@ function parentForkPaths(
       const leftStem = nodeCenterX(stemXs[0]!, zoom)
       const rightStem = nodeCenterX(stemXs[stemXs.length - 1]!, zoom)
       const midX = (leftStem + rightStem) / 2
-      const flatHalf = Boolean(halfSiblingSolo(fork))
+      const halfSolo = halfSiblingSolo(fork)
+      const flatHalf = Boolean(halfSolo)
 
       for (const stem of fork.stems) {
         const px = nodeCenterX(stem.x, zoom)
@@ -366,11 +369,27 @@ function parentForkPaths(
         parts.push(`M ${midX} ${unionY} V ${railY}`)
       }
 
-      const dropX = Math.min(childMax, Math.max(childMin, midX))
+      const halfXs = halfSolo?.children.map((c) => c.x) ?? []
+      const bandMin = nodeCenterX(
+        Math.min(...fork.children.map((c) => c.x), ...halfXs),
+        zoom,
+      )
+      const bandMax = nodeCenterX(
+        Math.max(...fork.children.map((c) => c.x), ...halfXs),
+        zoom,
+      )
+
+      const dropX = Math.min(bandMax, Math.max(bandMin, midX))
       if (Math.abs(dropX - midX) > 0.5) {
         parts.push(`M ${midX} ${dropY} H ${dropX}`)
       }
-      if (!flatHalf && Math.abs(childMax - childMin) > 0.5) {
+      if (flatHalf) {
+        // One continuous bar over full + half siblings (no arm from a parent
+        // stem out to a stranded half-sib).
+        if (Math.abs(bandMax - bandMin) > 0.5) {
+          parts.push(`M ${bandMin} ${unionY} H ${bandMax}`)
+        }
+      } else if (Math.abs(childMax - childMin) > 0.5) {
         parts.push(`M ${childMin} ${railY} H ${childMax}`)
       }
 
@@ -392,13 +411,10 @@ function parentForkPaths(
       )
 
       if (coupleMate) {
-        // Shared parent already reaches unionY via the couple. Hang half-sibs
-        // from that same bar — no second lower horizontal.
+        // Couple fork already owns the shared bar (including half-sib span).
+        // Only drop verticals - never draw a long stem→child arm.
         for (const child of fork.children) {
           const cx = nodeCenterX(child.x, zoom)
-          if (Math.abs(cx - px) > 0.5) {
-            parts.push(`M ${px} ${unionY} H ${cx}`)
-          }
           parts.push(`M ${cx} ${unionY} V ${fork.childTop}`)
         }
       } else {
@@ -467,6 +483,7 @@ export function TreeCanvas({
   onOpenMenu,
   onCloseMenu,
   onMenuAction,
+  onImportDragonPage,
 }: TreeCanvasProps) {
   const { treeZoom: zoom } = useViewSettings()
   const dragons = listDragons(project)
@@ -710,7 +727,7 @@ export function TreeCanvas({
     const target = event.target as HTMLElement
     if (
       target.closest(
-        '.dragon-node, .context-menu, .tree-canvas__zoom',
+        '.dragon-node, .context-menu, .tree-canvas__zoom, .tree-canvas__import',
       )
     ) {
       return
@@ -912,7 +929,9 @@ export function TreeCanvas({
           {interactive ? (
             <>
               <br />
-              <span className="tree-canvas__hint">Right-click to create a dragon.</span>
+              <span className="tree-canvas__hint">
+                Right-click to create a dragon, or import a downloaded page.
+              </span>
             </>
           ) : null}
         </p>
@@ -1004,51 +1023,65 @@ export function TreeCanvas({
             </div>
           </div>
 
-          <div className="tree-canvas__zoom" role="group" aria-label="Zoom">
-            <input
-              type="range"
-              className="tree-canvas__zoom-bar"
-              min={MIN_TREE_ZOOM}
-              max={MAX_TREE_ZOOM}
-              step={0.01}
-              value={zoom}
-              aria-valuemin={MIN_TREE_ZOOM}
-              aria-valuemax={MAX_TREE_ZOOM}
-              aria-valuenow={zoom}
-              aria-valuetext={`${Math.round(zoom * 100)} percent`}
-              aria-label="Zoom"
-              title={`${Math.round(zoom * 100)}%`}
-              onChange={(event) => {
-                const next = Number(event.target.value)
-                const viewport = viewportRef.current
-                if (!viewport) {
-                  setViewSettings({ treeZoom: next })
-                  return
-                }
-                const rect = viewport.getBoundingClientRect()
-                zoomAt(
-                  rect.left + rect.width / 2,
-                  rect.top + rect.height / 2,
-                  next,
-                )
-              }}
-              onDoubleClick={() => {
-                const viewport = viewportRef.current
-                if (!viewport) {
-                  setViewSettings({ treeZoom: 1 })
-                  return
-                }
-                const rect = viewport.getBoundingClientRect()
-                zoomAt(
-                  rect.left + rect.width / 2,
-                  rect.top + rect.height / 2,
-                  1,
-                )
-              }}
-            />
-          </div>
         </>
       )}
+
+      {interactive && onImportDragonPage ? (
+        <button
+          type="button"
+          className="tree-canvas__import"
+          title="Import a downloaded Flight Rising dragon page (.mhtml or .html)"
+          onClick={onImportDragonPage}
+        >
+          Import page
+        </button>
+      ) : null}
+
+      {dragons.length > 0 ? (
+        <div className="tree-canvas__zoom" role="group" aria-label="Zoom">
+          <input
+            type="range"
+            className="tree-canvas__zoom-bar"
+            min={MIN_TREE_ZOOM}
+            max={MAX_TREE_ZOOM}
+            step={0.01}
+            value={zoom}
+            aria-valuemin={MIN_TREE_ZOOM}
+            aria-valuemax={MAX_TREE_ZOOM}
+            aria-valuenow={zoom}
+            aria-valuetext={`${Math.round(zoom * 100)} percent`}
+            aria-label="Zoom"
+            title={`${Math.round(zoom * 100)}%`}
+            onChange={(event) => {
+              const next = Number(event.target.value)
+              const viewport = viewportRef.current
+              if (!viewport) {
+                setViewSettings({ treeZoom: next })
+                return
+              }
+              const rect = viewport.getBoundingClientRect()
+              zoomAt(
+                rect.left + rect.width / 2,
+                rect.top + rect.height / 2,
+                next,
+              )
+            }}
+            onDoubleClick={() => {
+              const viewport = viewportRef.current
+              if (!viewport) {
+                setViewSettings({ treeZoom: 1 })
+                return
+              }
+              const rect = viewport.getBoundingClientRect()
+              zoomAt(
+                rect.left + rect.width / 2,
+                rect.top + rect.height / 2,
+                1,
+              )
+            }}
+          />
+        </div>
+      ) : null}
 
       {linkLine ? (
         <svg className="tree-canvas__link-band" aria-hidden="true">

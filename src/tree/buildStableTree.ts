@@ -325,6 +325,9 @@ export function buildStableTree(
   // ancestors (never park one mate alone under their parents).
   layoutCouplesOnRows(project, placed, childrenIndex)
   layoutCouplesOnRows(project, placed, childrenIndex)
+  // Last resort: collapse leftover holes between siblings / half-siblings
+  // (Ferenczi: Strawberry left stranded while Nocolith×Whistling kids sat at x=8).
+  tightenSiblingRuns(project, placed)
 
   const siblingEdges = buildSiblingEdges(project, placed)
   const { nodes, minGeneration, maxGeneration } = normalizePlaced(placed)
@@ -465,6 +468,11 @@ function coupleMotherFather(
 
 type CoupleBlock = { ids: string[]; sortKey: number }
 
+/**
+ * Desired X under known parents on the row above.
+ * Both parents → midpoint; only mother or father → that parent's X
+ * (keeps half-siblings like Ferenczi's Strawberry beside the full-sibling pack).
+ */
 function parentMidpoint(
   project: Project,
   dragonId: string,
@@ -472,17 +480,24 @@ function parentMidpoint(
   childGeneration: number,
 ): number | null {
   const dragon = project.dragons[dragonId]
-  if (!dragon?.motherId || !dragon.fatherId) return null
-  const mother = placed.get(dragon.motherId)
-  const father = placed.get(dragon.fatherId)
-  if (!mother || !father) return null
-  if (
-    mother.generation !== childGeneration - 1 ||
-    father.generation !== childGeneration - 1
-  ) {
-    return null
-  }
-  return (mother.x + father.x) / 2
+  if (!dragon) return null
+
+  const mother =
+    dragon.motherId && placed.has(dragon.motherId)
+      ? placed.get(dragon.motherId)!
+      : null
+  const father =
+    dragon.fatherId && placed.has(dragon.fatherId)
+      ? placed.get(dragon.fatherId)!
+      : null
+
+  const motherOk = mother && mother.generation === childGeneration - 1
+  const fatherOk = father && father.generation === childGeneration - 1
+
+  if (motherOk && fatherOk) return (mother.x + father.x) / 2
+  if (motherOk) return mother.x
+  if (fatherOk) return father.x
+  return null
 }
 
 function sharedChildrenMid(
@@ -534,7 +549,57 @@ function buildRowBlocks(
   return blocks
 }
 
-/** Place blocks left-to-right, each centered on sortKey when space allows. */
+/**
+ * Collapse gaps larger than one step between dragons that share a parent
+ * (or an explicit sibling group). Unrelated clusters keep their spacing.
+ */
+function tightenSiblingRuns(
+  project: Project,
+  placed: Map<string, LayoutSlot>,
+) {
+  const step = 1 + SIBLING_GAP
+  const byGen = new Map<number, string[]>()
+  for (const [id, slot] of placed) {
+    const row = byGen.get(slot.generation) ?? []
+    row.push(id)
+    byGen.set(slot.generation, row)
+  }
+
+  for (const [generation, ids] of byGen) {
+    const sorted = [...ids].sort(
+      (a, b) =>
+        (placed.get(a)?.x ?? 0) - (placed.get(b)?.x ?? 0) ||
+        a.localeCompare(b),
+    )
+
+    for (let i = 1; i < sorted.length; i++) {
+      const prevId = sorted[i - 1]!
+      const currId = sorted[i]!
+      const prev = project.dragons[prevId]
+      const curr = project.dragons[currId]
+      const prevSlot = placed.get(prevId)
+      const currSlot = placed.get(currId)
+      if (!prev || !curr || !prevSlot || !currSlot) continue
+      if (!areSiblings(prev, curr)) continue
+
+      const gap = currSlot.x - prevSlot.x
+      if (gap <= step + 1e-6) continue
+
+      const delta = gap - step
+      for (let j = i; j < sorted.length; j++) {
+        const id = sorted[j]!
+        const slot = placed.get(id)!
+        placed.set(id, { generation, x: slot.x - delta })
+      }
+    }
+  }
+}
+
+/**
+ * Place blocks left-to-right in sortKey order.
+ * First block keeps its ideal X; the rest pack tightly against the previous
+ * block so half-siblings cannot leave a hole (Ferenczi: Strawberry vs Pitch).
+ */
 function placeRowBlocks(
   placed: Map<string, LayoutSlot>,
   blocks: CoupleBlock[],
@@ -553,7 +618,10 @@ function placeRowBlocks(
     const block = blocks[b]!
     const width = (block.ids.length - 1) * step
     const idealLeft = block.sortKey - width / 2
-    const left = Math.max(cursor, idealLeft)
+    // Do not honor idealLeft jumps after the first block - that re-opened
+    // empty columns between a lone half-sibling and the shared-kid pack.
+    const left =
+      cursor === Number.NEGATIVE_INFINITY ? idealLeft : cursor
 
     for (let i = 0; i < block.ids.length; i++) {
       const id = block.ids[i]!

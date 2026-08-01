@@ -71,7 +71,6 @@ export function Workspace() {
   const viewSettings = useViewSettings()
   const [menuOpen, setMenuOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [status, setStatus] = useState<string | null>(null)
   const [booting, setBooting] = useState(true)
   const [hasSession, setHasSession] = useState(false)
   const [welcomeError, setWelcomeError] = useState<string | null>(null)
@@ -83,7 +82,7 @@ export function Workspace() {
     setHasSession(restored)
     setBooting(false)
     if (restored && !wasLastPersistSuccessful()) {
-      setStatus(
+      window.alert(
         'Project restored, but this browser blocked saving. Use Save as JSON for backups.',
       )
     }
@@ -94,7 +93,7 @@ export function Workspace() {
   }, [project])
 
   function showError(message: string) {
-    setStatus(message)
+    window.alert(message)
   }
 
   function handleCreated(result: { ok: true; dragonId?: string } | { ok: false; error: string }) {
@@ -128,7 +127,6 @@ export function Workspace() {
       clearSelection()
       setHasSession(true)
       setWelcomeError(null)
-      setStatus(`Opened “${loaded.project.name}”.`)
       return true
     } catch (error) {
       const message =
@@ -138,7 +136,7 @@ export function Workspace() {
       if (options?.fromWelcome) {
         setWelcomeError(message)
       } else {
-        setStatus(message)
+        showError(message)
       }
       return false
     }
@@ -231,8 +229,6 @@ export function Workspace() {
     let project = getProject()
     let lastMainId: string | null = null
     let imported = 0
-    let created = 0
-    let updated = 0
     const errors: string[] = []
 
     for (const file of files) {
@@ -247,8 +243,6 @@ export function Workspace() {
         project = merged.project
         lastMainId = merged.summary.mainId
         imported += 1
-        created += merged.summary.created
-        updated += merged.summary.updated
       } catch (error) {
         const message =
           error instanceof FrDragonPageParseError
@@ -261,14 +255,9 @@ export function Workspace() {
     if (imported > 0) {
       replaceProject(project)
       if (lastMainId) selectDragon(lastMainId, getProject())
-      const bits = [`Imported ${imported} page${imported === 1 ? '' : 's'}`]
-      if (created) bits.push(`${created} new`)
-      if (updated) bits.push(`${updated} updated`)
-      setStatus(
-        errors.length > 0
-          ? `${bits.join(' · ')}. Some files failed.`
-          : `${bits.join(' · ')}.`,
-      )
+      if (errors.length > 0) {
+        showError(`Imported ${imported} page(s). Some files failed:\n${errors[0]}`)
+      }
     } else if (errors.length > 0) {
       showError(errors[0]!)
     }
@@ -282,7 +271,6 @@ export function Workspace() {
       const name = askProjectName(project.name)
       if (name === null || name === project.name) return
       renameProject(name)
-      setStatus(`Renamed to “${name}”.`)
       return
     }
 
@@ -296,13 +284,11 @@ export function Workspace() {
       const name = askProjectName('Untitled')
       if (name === null) return
       startNewProject(name)
-      setStatus(`Created “${name}”.`)
       return
     }
 
     if (action === 'download') {
       downloadProjectJson(getProjectFile())
-      setStatus('Project downloaded as JSON.')
       return
     }
 
@@ -373,18 +359,10 @@ export function Workspace() {
           onOpenMenu={setCanvasMenu}
           onCloseMenu={() => setCanvasMenu(null)}
           onMenuAction={handleCanvasMenuAction}
-        />
-
-        <button
-          type="button"
-          className="workspace__import"
-          title="Import a downloaded Flight Rising dragon page (.mhtml or .html)"
-          onClick={() => {
+          onImportDragonPage={() => {
             void handleImportDragonPages()
           }}
-        >
-          Import dragon's page
-        </button>
+        />
       </div>
 
       <SettingsDialog
@@ -393,15 +371,6 @@ export function Workspace() {
         onChange={setViewSettings}
         onClose={() => setSettingsOpen(false)}
       />
-
-      {status ? (
-        <div className="workspace__status" role="status">
-          <span>{status}</span>
-          <button type="button" onClick={() => setStatus(null)}>
-            Close
-          </button>
-        </div>
-      ) : null}
     </div>
   )
 }

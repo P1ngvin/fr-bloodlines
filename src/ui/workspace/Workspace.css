@@ -12,70 +12,10 @@
 }
 
 .workspace__body {
-  position: relative;
   display: flex;
   flex: 1;
   min-height: 0;
   overflow: hidden;
-}
-
-.workspace__import {
-  position: absolute;
-  left: 0.75rem;
-  bottom: 0.75rem;
-  z-index: 20;
-  appearance: none;
-  margin: 0;
-  padding: 0.5rem 0.7rem;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--paper-lift) 96%, transparent);
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 8%, transparent);
-  color: var(--ink);
-  font: inherit;
-  font-size: 0.78rem;
-  font-weight: 500;
-  line-height: 1.2;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.workspace__import:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.workspace__import:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
-}
-
-.workspace__status {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.5rem 1.1rem;
-  border-top: 1px solid var(--line);
-  background: var(--paper-lift);
-  font-size: 0.84rem;
-  color: var(--ink-soft);
-}
-
-.workspace__status button {
-  appearance: none;
-  border: none;
-  background: transparent;
-  color: var(--accent);
-  font: inherit;
-  font-size: 0.8rem;
-  font-weight: 600;
-  padding: 0.2rem 0;
-  cursor: pointer;
-}
-
-.workspace__status button:hover {
-  color: var(--accent-hover);
 }
 
 @media (max-width: 720px) {
